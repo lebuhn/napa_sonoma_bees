@@ -1,0 +1,84 @@
+---
+title: "napa_network_analysis"
+format: html
+editor: visual
+---
+
+## Napa Sonoma bee resurvey
+
+```{r}
+
+#| message: true
+
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+# Read in data
+
+```{r}
+#| echo: true
+#| warning: true
+
+bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-19_data.csv", header = T)
+
+bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv", header = T)
+
+```
+
+# Review data properties
+
+```{r}
+#| echo: true
+#| warning: true
+
+str(bee_data)
+unique(bee_data$locality)
+```
+
+Clean data set by 
+  correcting spelling for Stag's Leap and Wappo Hill
+  preserving a subset of the columns, 
+  removing sites that were not sampled in all years and 
+  changing start_date to a date class.
+  
+  Check that numbers of bees per site agree after spelling correction and other modifications.
+
+```{r}
+
+#| echo: true
+#| warning: true
+
+sampled_localities <- c("Bouverie Preserve",
+                          "Hudson",
+                          "Saintsbury",
+                          "Goode",
+                          "StagsLeap",
+                          "Wappo",
+                          "Quintessa",
+                          "Veterans Home")
+
+bee_data_clean <- bee_data %>%
+mutate(locality_c = case_when (
+         locality %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ locality)) %>%
+ mutate(locality_c = case_when (
+         locality_c %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ locality_c)) %>%
+select (genus_name, species, locality_c, start_date, type, year, number) %>%
+    filter (locality_c %in% sampled_localities ) %>%
+  mutate (start_date = as.Date(start_date, format="%m/%d/%y"))
+
+head(bee_data_clean)
+
+#Check that samples are still correct
+
+bee_data_clean %>% 
+  group_by(locality_c) %>% 
+  summarize(count_bees = sum(number))
+
+bee_data %>% 
+  group_by(locality) %>% 
+  summarize(count_bees = sum(number))
+
+
+```
