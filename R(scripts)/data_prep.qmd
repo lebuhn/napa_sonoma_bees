@@ -15,7 +15,7 @@ library(tidyr)
 library(readr)
 ```
 
-# Read in data
+### Read in data
 
 ```{r}
 #| echo: true
@@ -27,7 +27,7 @@ bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab rese
 
 ```
 
-# Review data properties
+### Review data properties
 
 ```{r}
 #| echo: true
@@ -37,13 +37,9 @@ str(bee_data)
 unique(bee_data$locality)
 ```
 
-Clean data set by 
-  correcting spelling for Stag's Leap and Wappo Hill
-  preserving a subset of the columns, 
-  removing sites that were not sampled in all years and 
-  changing start_date to a date class.
-  
-  Check that numbers of bees per site agree after spelling correction and other modifications.
+Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class.
+
+Check that numbers of bees per site agree after spelling correction and other modifications.
 
 ```{r}
 
@@ -81,4 +77,10 @@ bee_data %>%
   summarize(count_bees = sum(number))
 
 
+```
+
+```{r}
+sampling_dates <- bee_data_clean %>%
+group_by (locality_c, year) %>%
+    summarise(no_samples = length(unique(start_date)))
 ```
