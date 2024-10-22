@@ -17,6 +17,7 @@ library(lme4)
 library(lmerTest)  
 library(ggplot2)
 library(emmeans)
+library(MASS)
 ```
 
 ### Read in data
@@ -43,6 +44,7 @@ str(bee_data)
 unique(bee_data$locality)
 ```
 
+###Clean dataset
 Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class and remove sample from 2001
 
 Check that numbers of bees per site agree after spelling correction and other modifications.
@@ -63,22 +65,17 @@ sampled_localities <- c("Bouverie Preserve",
 
 bee_data_clean <- bee_data %>%
 
-  mutate(site = case_when (
-         locality %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ locality)) %>%
+  mutate(site = case_when (locality %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ locality)) %>%
 
-   mutate(site = case_when (
-         site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) %>%
+   mutate(site = case_when (site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) %>%
 
-   select (genus_name, species, site, start_date, type, year, number) %>%
-    filter (site %in% sampled_localities ) %>%
-    filter(!(year %in% c(2001, 2019))) %>%
+  select (genus_name, species, site, start_date, type, year, number) %>%
+  filter (site %in% sampled_localities ) %>%
+  filter(!(year %in% c(2001))) %>%
   mutate (start_date = as.Date(start_date, format="%m/%d/%y") )
   
 
 head(bee_data_clean)
-
-
-
 
 
 #create new variable that combines the genus and species name
@@ -98,12 +95,12 @@ bee_data %>%
 
 ```
 
-Create data frame for BACI analysis
+###Create data frame for BACI analysis
 
 ```{r}
 sites_summary <- bee_data_clean %>%
 group_by (site, year) %>%
-    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund_ = sum(number))
+    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund = sum(number))
 
 sites_summary <- sites_summary %>%
   left_join(site_data, by = "site")
@@ -112,6 +109,7 @@ sites_summary
 
 
 ```
+###Analyze using a linear mixed effects model
 
 Analyze the data using the `lmer()` function to fit a linear mixed-effects model where:
 
@@ -119,7 +117,7 @@ Analyze the data using the `lmer()` function to fit a linear mixed-effects model
 
 -   `treatment` and `year` are fixed effects, and their interaction is included to assess the BACI impact.
 
--   `samplingEvents` is included as a covariate.
+-   `sampling_events` is included as a covariate.
 
 -   `(1 | site)` indicates that Site is a random effect to account for variability among sites.
 
@@ -128,25 +126,103 @@ Analyze the data using the `lmer()` function to fit a linear mixed-effects model
 sites_summary$year <- factor(sites_summary$year)
 
 # Fit a mixed-effects model
-model <- lmer(no_spp ~ treatment * year + sampling_events + (1 | site), data = sites_summary)
+model1 <- lmer(no_spp ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
 
 # Summary of the model
-summary(model)
+summary(model1)
 
 # Extract p-values
-p_values <- summary(model)$coefficients[, "Pr(>|t|)"]
+p_values <- summary(model1)$coefficients[, "Pr(>|t|)"]
 
 # Print p-values
 print(p_values)
 
 
+# Response variable abundance
+
+# Fit a mixed-effects model
+model2 <- lmer(abund ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
+
+# Summary of the model
+summary(model2)
+
+# Extract p-values
+p_values <- summary(model2)$coefficients[, "Pr(>|t|)"]
+
+# Print p-values
+print(p_values)
 
 
+# Here we plot the estimated means for each group 
 
+emm1 <- emmeans(model1, ~ year * treatment)
+plot(emm1)
 
-# Visualization (optional)
-# Here we plot the estimated means for each group
+# Convert to data frame for ggplot
+emm1_df <- as.data.frame(emm1)
 
-emm <- emmeans(model, ~ treatment * year)
-plot(emm)
+# Plot the results
+plot_spprich <- ggplot(emm1_df, aes(x = year, y = emmean, color = treatment)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = treatment), size = 1) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
+  labs(title = "Estimated Marginal Means - Species richness",
+       x = "Year",
+       y = "Estimated Mean Value",
+       color = "treatment") +
+  theme_minimal()
+plot_spprich
+
+emm2 <- emmeans(model2, ~ year * treatment)
+
+# Convert to data frame for ggplot
+emm2_df <- as.data.frame(emm2)
+
+# Plot the results
+plot_abund <- ggplot(emm2_df, aes(x = year, y = emmean, color = treatment)) +
+  geom_point(size = 3) +
+  geom_line(aes(group = treatment), size = 1) +
+  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
+  labs(title = "Estimated Marginal Means - Abundance",
+       x = "Year",
+       y = "Estimated Mean Value",
+       color = "treatment") +
+  theme_minimal()
+
+plot_abund
+```
+###Analyze using a poisson regression and negative binomial model
+
+Re-analyze this as a poisson regression because it is count data
+
+```{r}
+## Poisson regression model
+
+# Convert Year and treatment to factors
+
+sites_summary$treatment <- factor(sites_summary$treatment)
+
+# Fit a Poisson regression model
+poisson_model <- glm(no_spp ~ treatment * year + sampling_events, data = sites_summary, family = "poisson")
+
+# Summary of the model
+summary(poisson_model)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
+print(paste("Overdispersion ratio of poisson:", overdispersion_test))
+
+# Fit a negative binomial model
+nb_model <- glm.nb(no_spp ~ treatment * year + sampling_events, data = sites_summary)
+
+# Summary of the negative binomial model
+summary(nb_model)
+
+# Extracting p-values
+p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
+print(p_values)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
+print(paste("Overdispersion ratio:", overdispersion_test))
 ```
