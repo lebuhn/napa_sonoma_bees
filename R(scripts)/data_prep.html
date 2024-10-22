@@ -117,20 +117,60 @@ Attaching package: 'dplyr'</code></pre>
     intersect, setdiff, setequal, union</code></pre>
 </div>
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Loading required package: Matrix</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'Matrix'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following objects are masked from 'package:tidyr':
+
+    expand, pack, unpack</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lmerTest)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>
+Attaching package: 'lmerTest'</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:lme4':
+
+    lmer</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>The following object is masked from 'package:stats':
+
+    step</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(emmeans)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: package 'emmeans' was built under R version 4.4.1</code></pre>
+</div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Welcome to emmeans.
+Caution: You lose important information if you filter this package's results.
+See '? untidy'</code></pre>
+</div>
 </div>
 <section id="read-in-data" class="level3">
 <h3 class="anchored" data-anchor-id="read-in-data">Read in data</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>bee_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-19_data.csv"</span>, <span class="at">header =</span> T)</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>bee_traits <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv"</span>, <span class="at">header =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>bee_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-19_data.csv"</span>, <span class="at">header =</span> T)</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>bee_traits <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv"</span>, <span class="at">header =</span> T)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>site_data <span class="ot">&lt;-</span><span class="fu">read.csv</span>(<span class="st">"/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sites.csv"</span>, <span class="at">header =</span> T)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="review-data-properties" class="level3">
 <h3 class="anchored" data-anchor-id="review-data-properties">Review data properties</h3>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(bee_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(bee_data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>'data.frame':   3608 obs. of  11 variables:
  $ barcode   : int  20010012 20010140 20010178 20010342 20010371 20010372 20010377 20010435 20010451 20010452 ...
@@ -145,7 +185,7 @@ Attaching package: 'dplyr'</code></pre>
  $ number    : int  1 1 1 1 1 1 1 1 1 1 ...
  $ technique : chr  "netting" "netting" "netting" "netting" ...</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(bee_data<span class="sc">$</span>locality)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">unique</span>(bee_data<span class="sc">$</span>locality)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code> [1] "Stag's Leap"       "Bouverie Preserve" "Goode"            
  [4] "Saintsbury"        "Veteran's Home"    "Hudson"           
@@ -153,60 +193,70 @@ Attaching package: 'dplyr'</code></pre>
 [10] "Stag's leap"      </code></pre>
 </div>
 </div>
-<p>Clean data set by correcting spelling for Stag’s Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class.</p>
+<p>Clean data set by correcting spelling for Stag’s Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class and remove sample from 2001</p>
 <p>Check that numbers of bees per site agree after spelling correction and other modifications.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: true</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#| warning: true</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>sampled_localities <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Bouverie Preserve"</span>,</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Hudson"</span>,</span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Saintsbury"</span>,</span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Goode"</span>,</span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"StagsLeap"</span>,</span>
-<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Wappo"</span>,</span>
-<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Quintessa"</span>,</span>
-<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Veterans Home"</span>)</span>
-<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>bee_data_clean <span class="ot">&lt;-</span> bee_data <span class="sc">%&gt;%</span></span>
-<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="fu">mutate</span>(<span class="at">locality_c =</span> <span class="fu">case_when</span> (</span>
-<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>         locality <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Wappo Hill"</span>, <span class="st">"Wappo hill"</span> ) <span class="sc">~</span> <span class="st">"Wappo"</span>, <span class="cn">TRUE</span> <span class="sc">~</span> locality)) <span class="sc">%&gt;%</span></span>
-<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a> <span class="fu">mutate</span>(<span class="at">locality_c =</span> <span class="fu">case_when</span> (</span>
-<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>         locality_c <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Stag's leap"</span>, <span class="st">"Stag's Leap"</span> ) <span class="sc">~</span> <span class="st">"StagsLeap"</span>, <span class="cn">TRUE</span> <span class="sc">~</span> locality_c)) <span class="sc">%&gt;%</span></span>
-<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="fu">select</span> (genus_name, species, locality_c, start_date, type, year, number) <span class="sc">%&gt;%</span></span>
-<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span> (locality_c <span class="sc">%in%</span> sampled_localities ) <span class="sc">%&gt;%</span></span>
-<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span> (<span class="at">start_date =</span> <span class="fu">as.Date</span>(start_date, <span class="at">format=</span><span class="st">"%m/%d/%y"</span>))</span>
-<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(bee_data_clean)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#| echo: true</span></span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="co">#| warning: true</span></span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>sampled_localities <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Bouverie Preserve"</span>,</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Hudson"</span>,</span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Saintsbury"</span>,</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Goode"</span>,</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"StagsLeap"</span>,</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Wappo"</span>,</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Quintessa"</span>,</span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>                          <span class="st">"Veteran's Home"</span>)</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>bee_data_clean <span class="ot">&lt;-</span> bee_data <span class="sc">%&gt;%</span></span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">site =</span> <span class="fu">case_when</span> (</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a>         locality <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Wappo Hill"</span>, <span class="st">"Wappo hill"</span> ) <span class="sc">~</span> <span class="st">"Wappo"</span>, <span class="cn">TRUE</span> <span class="sc">~</span> locality)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a>   <span class="fu">mutate</span>(<span class="at">site =</span> <span class="fu">case_when</span> (</span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>         site <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"Stag's leap"</span>, <span class="st">"Stag's Leap"</span> ) <span class="sc">~</span> <span class="st">"StagsLeap"</span>, <span class="cn">TRUE</span> <span class="sc">~</span> site)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>   <span class="fu">select</span> (genus_name, species, site, start_date, type, year, number) <span class="sc">%&gt;%</span></span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span> (site <span class="sc">%in%</span> sampled_localities ) <span class="sc">%&gt;%</span></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span>(year <span class="sc">%in%</span> <span class="fu">c</span>(<span class="dv">2001</span>, <span class="dv">2019</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span> (<span class="at">start_date =</span> <span class="fu">as.Date</span>(start_date, <span class="at">format=</span><span class="st">"%m/%d/%y"</span>) )</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(bee_data_clean)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>  genus_name     species        locality_c start_date type year number
-1   Ceratina     acantha         StagsLeap 2002-06-07      2002      1
-2    Andrena    caerulea Bouverie Preserve 2002-04-26      2002      1
-3    Andrena    caerulea Bouverie Preserve 2002-04-26      2002      1
-4   Halictus tripartitus             Goode 2001-03-15      2001      1
-5   Halictus tripartitus Bouverie Preserve 2002-04-26      2002      1
-6   Halictus tripartitus Bouverie Preserve 2002-04-26      2002      1</code></pre>
+<pre><code>  genus_name      species              site start_date type year number
+1   Ceratina      acantha         StagsLeap 2002-06-07      2002      1
+2    Andrena     caerulea Bouverie Preserve 2002-04-26      2002      1
+3    Andrena     caerulea Bouverie Preserve 2002-04-26      2002      1
+4   Halictus  tripartitus Bouverie Preserve 2002-04-26      2002      1
+5   Halictus  tripartitus Bouverie Preserve 2002-04-26      2002      1
+6 Panurginus occidentalis Bouverie Preserve 2002-04-26      2002      1</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Check that samples are still correct</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>bee_data_clean <span class="sc">%&gt;%</span> </span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(locality_c) <span class="sc">%&gt;%</span> </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count_bees =</span> <span class="fu">sum</span>(number))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="co">#create new variable that combines the genus and species name</span></span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>bee_data_clean<span class="sc">$</span>combined_name <span class="ot">&lt;-</span> <span class="fu">paste</span>(bee_data_clean<span class="sc">$</span>genus_name,bee_data_clean<span class="sc">$</span>species, <span class="at">sep=</span><span class="st">" "</span>)</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a><span class="co">#Check that samples are still correct</span></span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>bee_data_clean <span class="sc">%&gt;%</span> </span>
+<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(site) <span class="sc">%&gt;%</span> </span>
+<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count_bees =</span> <span class="fu">sum</span>(number))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 7 × 2
-  locality_c        count_bees
+<pre><code># A tibble: 8 × 2
+  site              count_bees
   &lt;chr&gt;                  &lt;int&gt;
-1 Bouverie Preserve        394
-2 Goode                    742
-3 Hudson                   546
-4 Quintessa                284
-5 Saintsbury               721
-6 StagsLeap                577
-7 Wappo                   1193</code></pre>
+1 Bouverie Preserve        341
+2 Goode                    635
+3 Hudson                   518
+4 Quintessa                253
+5 Saintsbury               623
+6 StagsLeap                481
+7 Veteran's Home           416
+8 Wappo                   1067</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>bee_data <span class="sc">%&gt;%</span> </span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(locality) <span class="sc">%&gt;%</span> </span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count_bees =</span> <span class="fu">sum</span>(number))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>bee_data <span class="sc">%&gt;%</span> </span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(locality) <span class="sc">%&gt;%</span> </span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">count_bees =</span> <span class="fu">sum</span>(number))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 10 × 2
    locality          count_bees
@@ -223,13 +273,119 @@ Attaching package: 'dplyr'</code></pre>
 10 Wappo hill               157</code></pre>
 </div>
 </div>
+<p>Create data frame for BACI analysis</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>sampling_dates <span class="ot">&lt;-</span> bee_data_clean <span class="sc">%&gt;%</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="fu">group_by</span> (locality_c, year) <span class="sc">%&gt;%</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">no_samples =</span> <span class="fu">length</span>(<span class="fu">unique</span>(start_date)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>sites_summary <span class="ot">&lt;-</span> bee_data_clean <span class="sc">%&gt;%</span></span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="fu">group_by</span> (site, year) <span class="sc">%&gt;%</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="at">sampling_events =</span> <span class="fu">length</span>(<span class="fu">unique</span>(start_date)), <span class="at">no_spp =</span> <span class="fu">length</span>(<span class="fu">unique</span>(combined_name)), <span class="at">abund_ =</span> <span class="fu">sum</span>(number))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stderr">
-<pre><code>`summarise()` has grouped output by 'locality_c'. You can override using the
+<pre><code>`summarise()` has grouped output by 'site'. You can override using the
 `.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>sites_summary <span class="ot">&lt;-</span> sites_summary <span class="sc">%&gt;%</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(site_data, <span class="at">by =</span> <span class="st">"site"</span>)</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>sites_summary</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 6
+# Groups:   site [8]
+   site               year sampling_events no_spp abund_ treatment
+   &lt;chr&gt;             &lt;int&gt;           &lt;int&gt;  &lt;int&gt;  &lt;int&gt; &lt;chr&gt;    
+ 1 Bouverie Preserve  2002               8     24    157 Impact   
+ 2 Bouverie Preserve  2003               7     26     95 Impact   
+ 3 Bouverie Preserve  2018               8     17     89 Impact   
+ 4 Goode              2002              11     43    306 Control  
+ 5 Goode              2003               8     30    192 Control  
+ 6 Goode              2018               9     28    137 Control  
+ 7 Hudson             2002               8     21    283 Impact   
+ 8 Hudson             2003               7     27    165 Impact   
+ 9 Hudson             2018              10     21     70 Impact   
+10 Quintessa          2002               7     17     72 Control  
+# ℹ 14 more rows</code></pre>
+</div>
+</div>
+<p>Analyze the data using the <code>lmer()</code> function to fit a linear mixed-effects model where:</p>
+<ul>
+<li><p><code>no_spp</code> is the response variable.</p></li>
+<li><p><code>treatment</code> and <code>year</code> are fixed effects, and their interaction is included to assess the BACI impact.</p></li>
+<li><p><code>samplingEvents</code> is included as a covariate.</p></li>
+<li><p><code>(1 | site)</code> indicates that Site is a random effect to account for variability among sites.</p></li>
+</ul>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Convert Year to a factor for categorical analysis</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>sites_summary<span class="sc">$</span>year <span class="ot">&lt;-</span> <span class="fu">factor</span>(sites_summary<span class="sc">$</span>year)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Fit a mixed-effects model</span></span>
+<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">lmer</span>(no_spp <span class="sc">~</span> treatment <span class="sc">*</span> year <span class="sc">+</span> sampling_events <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), <span class="at">data =</span> sites_summary)</span>
+<span id="cb31-6"><a href="#cb31-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb31-7"><a href="#cb31-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Summary of the model</span></span>
+<span id="cb31-8"><a href="#cb31-8" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: no_spp ~ treatment * year + sampling_events + (1 | site)
+   Data: sites_summary
+
+REML criterion at convergence: 71.4
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.2319 -0.5026  0.1493  0.3411  1.1331 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ site     (Intercept) 23.332   4.830   
+ Residual              6.975   2.641   
+Number of obs: 18, groups:  site, 6
+
+Fixed effects:
+                         Estimate Std. Error      df t value Pr(&gt;|t|)    
+(Intercept)               -3.3788     7.2991 10.9136  -0.463 0.652526    
+treatmentImpact           -3.6667     4.4950  5.1808  -0.816 0.450517    
+year2003                  -0.1975     2.2684  7.3762  -0.087 0.932932    
+year2018                  -3.0411     2.3518  7.5429  -1.293 0.234171    
+sampling_events            3.4692     0.7040  9.7519   4.928 0.000644 ***
+treatmentImpact:year2003   7.4692     3.1298  7.2563   2.386 0.047189 *  
+treatmentImpact:year2018  -6.1153     3.2675  7.4623  -1.872 0.100833    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Correlation of Fixed Effects:
+            (Intr) trtmnI yr2003 yr2018 smpln_ tI:200
+trtmntImpct -0.308                                   
+year2003    -0.420  0.228                            
+year2018    -0.495  0.220  0.560                     
+smplng_vnts -0.900  0.000  0.310  0.399              
+trtmnI:2003 -0.101 -0.331 -0.585 -0.226  0.225       
+trtmnI:2018  0.421 -0.317 -0.425 -0.748 -0.359  0.374</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract p-values</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>p_values <span class="ot">&lt;-</span> <span class="fu">summary</span>(model)<span class="sc">$</span>coefficients[, <span class="st">"Pr(&gt;|t|)"</span>]</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb33-4"><a href="#cb33-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Print p-values</span></span>
+<span id="cb33-5"><a href="#cb33-5" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(p_values)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             (Intercept)          treatmentImpact                 year2003 
+            0.6525259389             0.4505171055             0.9329317208 
+                year2018          sampling_events treatmentImpact:year2003 
+            0.2341707023             0.0006440118             0.0471889086 
+treatmentImpact:year2018 
+            0.1008326804 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualization (optional)</span></span>
+<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Here we plot the estimated means for each group</span></span>
+<span id="cb35-3"><a href="#cb35-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb35-4"><a href="#cb35-4" aria-hidden="true" tabindex="-1"></a>emm <span class="ot">&lt;-</span> <span class="fu">emmeans</span>(model, <span class="sc">~</span> treatment <span class="sc">*</span> year)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Cannot use mode = "kenward-roger" because *pbkrtest* package is not installed</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb37"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(emm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="data_prep_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
 </div>
 </div>
 </section>

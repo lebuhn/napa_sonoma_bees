@@ -13,6 +13,10 @@ editor: visual
 library(dplyr)
 library(tidyr)
 library(readr)
+library(lme4)
+library(lmerTest)  
+library(ggplot2)
+library(emmeans)
 ```
 
 ### Read in data
@@ -24,6 +28,8 @@ library(readr)
 bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-19_data.csv", header = T)
 
 bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv", header = T)
+
+site_data <-read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sites.csv", header = T)
 
 ```
 
@@ -37,7 +43,7 @@ str(bee_data)
 unique(bee_data$locality)
 ```
 
-Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class.
+Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class and remove sample from 2001
 
 Check that numbers of bees per site agree after spelling correction and other modifications.
 
@@ -53,23 +59,36 @@ sampled_localities <- c("Bouverie Preserve",
                           "StagsLeap",
                           "Wappo",
                           "Quintessa",
-                          "Veterans Home")
+                          "Veteran's Home")
 
 bee_data_clean <- bee_data %>%
-mutate(locality_c = case_when (
+
+  mutate(site = case_when (
          locality %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ locality)) %>%
- mutate(locality_c = case_when (
-         locality_c %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ locality_c)) %>%
-select (genus_name, species, locality_c, start_date, type, year, number) %>%
-    filter (locality_c %in% sampled_localities ) %>%
-  mutate (start_date = as.Date(start_date, format="%m/%d/%y"))
+
+   mutate(site = case_when (
+         site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) %>%
+
+   select (genus_name, species, site, start_date, type, year, number) %>%
+    filter (site %in% sampled_localities ) %>%
+    filter(!(year %in% c(2001, 2019))) %>%
+  mutate (start_date = as.Date(start_date, format="%m/%d/%y") )
+  
 
 head(bee_data_clean)
+
+
+
+
+
+#create new variable that combines the genus and species name
+
+bee_data_clean$combined_name <- paste(bee_data_clean$genus_name,bee_data_clean$species, sep=" ")
 
 #Check that samples are still correct
 
 bee_data_clean %>% 
-  group_by(locality_c) %>% 
+  group_by(site) %>% 
   summarize(count_bees = sum(number))
 
 bee_data %>% 
@@ -79,8 +98,55 @@ bee_data %>%
 
 ```
 
+Create data frame for BACI analysis
+
 ```{r}
-sampling_dates <- bee_data_clean %>%
-group_by (locality_c, year) %>%
-    summarise(no_samples = length(unique(start_date)))
+sites_summary <- bee_data_clean %>%
+group_by (site, year) %>%
+    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund_ = sum(number))
+
+sites_summary <- sites_summary %>%
+  left_join(site_data, by = "site")
+
+sites_summary
+
+
+```
+
+Analyze the data using the `lmer()` function to fit a linear mixed-effects model where:
+
+-   `no_spp` is the response variable.
+
+-   `treatment` and `year` are fixed effects, and their interaction is included to assess the BACI impact.
+
+-   `samplingEvents` is included as a covariate.
+
+-   `(1 | site)` indicates that Site is a random effect to account for variability among sites.
+
+```{r}
+# Convert Year to a factor for categorical analysis
+sites_summary$year <- factor(sites_summary$year)
+
+# Fit a mixed-effects model
+model <- lmer(no_spp ~ treatment * year + sampling_events + (1 | site), data = sites_summary)
+
+# Summary of the model
+summary(model)
+
+# Extract p-values
+p_values <- summary(model)$coefficients[, "Pr(>|t|)"]
+
+# Print p-values
+print(p_values)
+
+
+
+
+
+
+# Visualization (optional)
+# Here we plot the estimated means for each group
+
+emm <- emmeans(model, ~ treatment * year)
+plot(emm)
 ```
