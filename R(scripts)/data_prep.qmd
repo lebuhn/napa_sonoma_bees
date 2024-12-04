@@ -26,7 +26,7 @@ library(MASS)
 #| echo: true
 #| warning: true
 
-bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-19_data.csv", header = T)
+bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-18_data.csv", header = T)
 
 bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv", header = T)
 
@@ -45,6 +45,7 @@ unique(bee_data$locality)
 ```
 
 ###Clean dataset
+
 Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class and remove sample from 2001
 
 Check that numbers of bees per site agree after spelling correction and other modifications.
@@ -69,7 +70,7 @@ bee_data_clean <- bee_data %>%
 
    mutate(site = case_when (site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) %>%
 
-  select (genus_name, species, site, start_date, type, year, number) %>%
+  dplyr::select (genus_name, species, site, start_date, type, year, number) %>%
   filter (site %in% sampled_localities ) %>%
   filter(!(year %in% c(2001))) %>%
   mutate (start_date = as.Date(start_date, format="%m/%d/%y") )
@@ -109,6 +110,7 @@ sites_summary
 
 
 ```
+
 ###Analyze using a linear mixed effects model
 
 Analyze the data using the `lmer()` function to fit a linear mixed-effects model where:
@@ -126,43 +128,37 @@ Analyze the data using the `lmer()` function to fit a linear mixed-effects model
 sites_summary$year <- factor(sites_summary$year)
 
 # Fit a mixed-effects model
-model1 <- lmer(no_spp ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
+model_sprich <- lmer(no_spp ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
 
 # Summary of the model
-summary(model1)
+summary(model_sprich)
 
 # Extract p-values
-p_values <- summary(model1)$coefficients[, "Pr(>|t|)"]
+p_values <- summary(model_sprich)$coefficients[, "Pr(>|t|)"]
 
 # Print p-values
 print(p_values)
 
 
-# Response variable abundance
-
-# Fit a mixed-effects model
-model2 <- lmer(abund ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
-
-# Summary of the model
-summary(model2)
-
-# Extract p-values
-p_values <- summary(model2)$coefficients[, "Pr(>|t|)"]
-
-# Print p-values
-print(p_values)
+# Plot residuals for diagnostic checking
+par(mfrow = c(2, 2))
+plot(resid(model_sprich), main = "Residuals-Species richness")
+hist(resid(model_sprich), main = "Histogram of Residuals", xlab = "Residuals")
+qqnorm(resid(model_sprich))
+qqline(resid(model_sprich), col = "red")
 
 
-# Here we plot the estimated means for each group 
+# Here we plot the estimated means for each group for species richness
 
-emm1 <- emmeans(model1, ~ year * treatment)
-plot(emm1)
+emm_sprich <- emmeans(model_sprich, ~ year * treatment)
+plot(emm_sprich)
+pairs(emm_sprich)
 
 # Convert to data frame for ggplot
-emm1_df <- as.data.frame(emm1)
+emm_sprich_df <- as.data.frame(emm_sprich)
 
 # Plot the results
-plot_spprich <- ggplot(emm1_df, aes(x = year, y = emmean, color = treatment)) +
+plot_spprich <- ggplot(emm_sprich_df, aes(x = year, y = emmean, color = treatment)) +
   geom_point(size = 3) +
   geom_line(aes(group = treatment), size = 1) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
@@ -171,15 +167,46 @@ plot_spprich <- ggplot(emm1_df, aes(x = year, y = emmean, color = treatment)) +
        y = "Estimated Mean Value",
        color = "treatment") +
   theme_minimal()
+
 plot_spprich
 
-emm2 <- emmeans(model2, ~ year * treatment)
+
+
+```
+
+Analyze the abundance in the same way.
+
+```{r}
+
+# Response variable abundance
+
+# Fit a mixed-effects model
+model_abund <- lmer(abund ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
+
+# Summary of the model
+summary(model_abund)
+
+# Extract p-values
+p_values <- summary(model_abund)$coefficients[, "Pr(>|t|)"]
+
+# Print p-values
+print(p_values)
+
+# Plot residuals for diagnostic checking
+par(mfrow = c(2, 2))
+plot(resid(model_abund), main = "Residuals-Abundance")
+hist(resid(model_abund), main = "Histogram of Residuals", xlab = "Residuals")
+qqnorm(resid(model_abund))
+qqline(resid(model_abund), col = "red")
+# Here we plot the estimated means for each group for abundance
+emm_abund <- emmeans(model_abund, ~ year * treatment)
+#pairs(emm_abund)
 
 # Convert to data frame for ggplot
-emm2_df <- as.data.frame(emm2)
+emm_abund_df <- as.data.frame(emm_abund)
 
 # Plot the results
-plot_abund <- ggplot(emm2_df, aes(x = year, y = emmean, color = treatment)) +
+plot_abund <- ggplot(emm_abund_df, aes(x = year, y = emmean, color = treatment)) +
   geom_point(size = 3) +
   geom_line(aes(group = treatment), size = 1) +
   geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
@@ -191,9 +218,8 @@ plot_abund <- ggplot(emm2_df, aes(x = year, y = emmean, color = treatment)) +
 
 plot_abund
 ```
-###Analyze using a poisson regression and negative binomial model
 
-Re-analyze this as a poisson regression because it is count data
+###Analyze species richness using a poisson regression
 
 ```{r}
 ## Poisson regression model
@@ -203,7 +229,7 @@ Re-analyze this as a poisson regression because it is count data
 sites_summary$treatment <- factor(sites_summary$treatment)
 
 # Fit a Poisson regression model
-poisson_model <- glm(no_spp ~ treatment * year + sampling_events, data = sites_summary, family = "poisson")
+poisson_model <- glmer(no_spp ~ treatment * year + sampling_events + (1 | site), data = sites_summary, family = poisson(link ="log"))
 
 # Summary of the model
 summary(poisson_model)
@@ -212,6 +238,58 @@ summary(poisson_model)
 overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
 print(paste("Overdispersion ratio of poisson:", overdispersion_test))
 
+# Fit a negative binomial model
+nb_model <- glm.nb(no_spp ~ treatment * year + sampling_events, data = sites_summary)
+
+
+```
+
+####Redo the analysis using a negative binomial
+
+```{r}
+
+# Summary of the negative binomial model
+summary(nb_model)
+
+# Extracting p-values
+p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
+print(p_values)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
+print(paste("Overdispersion ratio:", overdispersion_test))
+
+
+
+
+```
+#### Poisson model of abundance
+
+```{r}
+
+
+## Poisson regression model
+
+# Convert Year and treatment to factors
+
+sites_summary$treatment <- factor(sites_summary$treatment)
+
+# Fit a Poisson regression model
+poisson_model <- glmer(abund ~ treatment * year + sampling_events + (1 | site), data = sites_summary, family = poisson(link ="log"))
+
+# Summary of the model
+summary(poisson_model)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
+print(paste("Overdispersion ratio of poisson:", overdispersion_test))
+
+
+```
+#### Negative binomial model of abundance.
+
+
+```{r}
 # Fit a negative binomial model
 nb_model <- glm.nb(no_spp ~ treatment * year + sampling_events, data = sites_summary)
 
