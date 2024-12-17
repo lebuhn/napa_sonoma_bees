@@ -12,6 +12,7 @@ editor: visual
 
 library(dplyr)
 library(tidyr)
+library(lubridate)
 library(readr)
 library(lme4)
 library(lmerTest)  
@@ -26,11 +27,14 @@ library(MASS)
 #| echo: true
 #| warning: true
 
-bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-18_data.csv", header = T)
+bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-18_data.csv") %>%
+    mutate(date = as.Date(start_date, format = "%m/%d/%y"))
 
 bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv", header = T)
 
 site_data <-read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sites.csv", header = T)
+
+dates_to_keep <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sample_dates_tokeep_02-18.csv", header = T)
 
 ```
 
@@ -46,7 +50,7 @@ unique(bee_data$locality)
 
 ###Clean dataset
 
-Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, removing sites that were not sampled in all years and changing start_date to a date class and remove sample from 2001
+Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, filter the sites to only those sites that were sampled in similar timeblocks.
 
 Check that numbers of bees per site agree after spelling correction and other modifications.
 
@@ -55,26 +59,72 @@ Check that numbers of bees per site agree after spelling correction and other mo
 #| echo: true
 #| warning: true
 
-sampled_localities <- c("Bouverie Preserve",
-                          "Hudson",
-                          "Saintsbury",
-                          "Goode",
-                          "StagsLeap",
-                          "Wappo",
-                          "Quintessa",
-                          "Veteran's Home")
+#Fix site names
+bee_data_1 <- bee_data %>%
 
-bee_data_clean <- bee_data %>%
+   mutate(site = case_when (site %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ site)) %>%
+   mutate(site = case_when (site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) 
+   
 
-  mutate(site = case_when (locality %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ locality)) %>%
 
-   mutate(site = case_when (site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) %>%
+# Create a list of valid dates for each site from the sample dates file
+sample_dates <- data.frame(
+  site = c(
+    rep("Bouverie Preserve", 21),
+    rep("Hudson", 18),
+    rep("Saintsbury", 19),
+    rep("Quintessa", 18),
+    rep("Veteran's Home", 21),
+    rep("Goode", 21),
+    rep("Stag's Leap", 21),
+    rep("Wappo Hill", 21)
+  ),
+  date = c(
+    # Bouverie Preserve dates
+    mdy(c("4/1/02", "5/10/02", "5/31/02", "6/24/02", "7/22/02", "8/5/02", 
+          "8/20/02", "4/20/03", "5/15/03", "5/31/03", "6/27/03", "7/24/03",
+          "8/9/03", "8/21/03", "3/28/18", "5/7/18", "5/16/18", "6/20/18",
+          "7/18/18", "8/8/18", "8/20/18")),
+    # Hudson dates
+    mdy(c("4/18/02", "5/17/02", "6/4/02", "6/27/02", "7/26/02", "8/7/02",
+          "4/17/03", "5/15/03", "6/4/03", "6/27/03", "7/10/03", "7/24/03",
+          "4/19/18", "5/16/18", "6/3/18", "6/24/18", "7/9/18", "7/23/18")),
+    # Saintsbury dates
+    mdy(c("4/18/02", "5/17/02", "6/4/02", "6/27/02", "7/10/02", "7/26/02",
+          "8/7/02", "4/24/03", "5/15/03", "6/4/03", "6/27/03", "7/10/03",
+          "7/24/03", "8/9/03", "4/19/18", "5/16/18", "6/3/18", "6/24/18",
+          "7/9/18")),
+    # Quintessa dates
+    mdy(c("4/19/02", "5/3/02", "5/23/02", "6/18/02", "7/17/02", "7/29/02",
+          "4/20/03", "5/4/03", "5/18/03", "6/15/03", "7/12/03", "7/27/03",
+          "4/8/18", "5/9/18", "5/23/18", "6/18/18", "7/18/18", "8/1/18")),
+    # Veteran's Home dates
+    mdy(c("4/19/02", "5/22/02", "6/3/02", "7/1/02", "7/16/02", "7/31/02",
+          "8/12/02", "4/13/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
+          "7/27/03", "8/8/03", "4/11/18", "5/23/18", "6/15/18", "6/24/18",
+          "7/11/18", "7/25/18", "8/8/18")),
+    # Goode dates
+    mdy(c("4/22/02", "5/13/02", "6/10/02", "6/25/02", "7/8/02", "7/23/02",
+          "8/21/02", "4/24/03", "5/15/03", "6/13/03", "6/27/03", "7/10/03",
+          "7/24/03", "8/21/03", "5/7/18", "5/16/18", "6/20/18", "6/30/18",
+          "7/18/18", "7/30/18", "8/20/18")),
+    # Stag's Leap dates
+    mdy(c("5/6/02", "5/24/02", "6/17/02", "7/3/02", "7/15/02", "7/31/02",
+          "8/26/02", "5/4/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
+          "7/27/03", "9/7/03", "5/9/18", "5/23/18", "6/18/18", "7/1/18",
+          "7/11/18", "7/25/18", "9/13/18")),
+    # Wappo Hill dates
+    mdy(c("5/10/02", "5/24/02", "6/17/02", "7/3/02", "7/15/02", "7/31/02",
+          "8/26/02", "5/4/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
+          "7/27/03", "8/24/03", "5/9/18", "5/23/18", "6/18/18", "7/1/18",
+          "7/11/18", "7/25/18", "8/22/18"))
+  )
+)
 
-  dplyr::select (genus_name, species, site, start_date, type, year, number) %>%
-  filter (site %in% sampled_localities ) %>%
-  filter(!(year %in% c(2001))) %>%
-  mutate (start_date = as.Date(start_date, format="%m/%d/%y") )
-  
+# Filter the bee data to only include records from the sample dates
+bee_data_clean <- bee_data_1 %>%
+  semi_join(sample_dates, by = c("site", "date"))
+
 
 head(bee_data_clean)
 
@@ -84,13 +134,9 @@ head(bee_data_clean)
 bee_data_clean$combined_name <- paste(bee_data_clean$genus_name,bee_data_clean$species, sep=" ")
 
 #Check that samples are still correct
-
+cols <- c("year","site")
 bee_data_clean %>% 
-  group_by(site) %>% 
-  summarize(count_bees = sum(number))
-
-bee_data %>% 
-  group_by(locality) %>% 
+  group_by(across(all_of(cols))) %>% 
   summarize(count_bees = sum(number))
 
 
@@ -101,7 +147,7 @@ bee_data %>%
 ```{r}
 sites_summary <- bee_data_clean %>%
 group_by (site, year) %>%
-    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund = sum(number))
+    summarise(sampling_events = length(unique(date)), no_spp = length(unique(combined_name)), abund = sum(number))
 
 sites_summary <- sites_summary %>%
   left_join(site_data, by = "site")
