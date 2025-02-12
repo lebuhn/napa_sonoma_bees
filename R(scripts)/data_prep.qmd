@@ -4,11 +4,12 @@ format: html
 editor: visual
 ---
 
-## Napa Sonoma bee resurvey
+## Napa-Sonoma BACI analysis of bee re-survey data
 
 ```{r}
 
 #| message: true
+#| echo: FALSE
 
 library(dplyr)
 library(tidyr)
@@ -19,6 +20,8 @@ library(lmerTest)
 library(ggplot2)
 library(emmeans)
 library(MASS)
+
+
 ```
 
 ### Read in data
@@ -27,14 +30,14 @@ library(MASS)
 #| echo: true
 #| warning: true
 
-bee_data <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_02-18_data.csv") %>%
-    mutate(date = as.Date(start_date, format = "%m/%d/%y"))
+bee_data <- read.csv("/~/GitHub/napa_sonoma_bees/data/processed/bee_02-18_data.csv") 
 
-bee_traits <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/bee_traits.csv", header = T)
+bee_traits <- read.csv("~/GitHub/napa_sonoma_bees/data/processed/bee_traits.csv", header = T)
 
-site_data <-read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sites.csv", header = T)
+site_data <-read.csv("~/GitHub/napa_sonoma_bees/data/processed/sites.csv", header = T)
 
-dates_to_keep <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sample_dates_tokeep_02-18.csv", header = T)
+#This is the file for removing dates
+dates_to_drop <- read.csv("~/GitHub/napa_sonoma_bees/data/processed/02_03_18_datestodrop.csv", header = T) 
 
 ```
 
@@ -45,14 +48,14 @@ dates_to_keep <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab r
 #| warning: true
 
 str(bee_data)
-unique(bee_data$locality)
+
 ```
 
 ###Clean dataset
 
-Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, filter the sites to only those sites that were sampled in similar timeblocks.
+Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns. Reformats dates and converts them to date. Creates a new variable, *combined_name*,that combines genus and species.
 
-Check that numbers of bees per site agree after spelling correction and other modifications.
+There is code here to filter the sites to only those sites that were sampled in similar timeblocks but it is commented out in favor of using all the data and treating number of sampling dates as a covariate.
 
 ```{r}
 
@@ -60,84 +63,59 @@ Check that numbers of bees per site agree after spelling correction and other mo
 #| warning: true
 
 #Fix site names
-bee_data_1 <- bee_data %>%
+bee_data_clean <- bee_data %>%
 
    mutate(site = case_when (site %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ site)) %>%
-   mutate(site = case_when (site %in% c("Stag's leap", "Stag's Leap" ) ~ "StagsLeap", TRUE ~ site)) 
-   
+   mutate(site = case_when (site %in% c("Stag's leap", "Stags Leap", "Stag's Leap" ) ~ "Stags", TRUE ~ site)) %>%
+   mutate(site = case_when (site %in% c("Veteran's Home" ) ~ "Veterans", TRUE ~ site))
 
-
-# Create a list of valid dates for each site from the sample dates file
-sample_dates <- data.frame(
-  site = c(
-    rep("Bouverie Preserve", 21),
-    rep("Hudson", 18),
-    rep("Saintsbury", 19),
-    rep("Quintessa", 18),
-    rep("Veteran's Home", 21),
-    rep("Goode", 21),
-    rep("Stag's Leap", 21),
-    rep("Wappo Hill", 21)
-  ),
-  date = c(
-    # Bouverie Preserve dates
-    mdy(c("4/1/02", "5/10/02", "5/31/02", "6/24/02", "7/22/02", "8/5/02", 
-          "8/20/02", "4/20/03", "5/15/03", "5/31/03", "6/27/03", "7/24/03",
-          "8/9/03", "8/21/03", "3/28/18", "5/7/18", "5/16/18", "6/20/18",
-          "7/18/18", "8/8/18", "8/20/18")),
-    # Hudson dates
-    mdy(c("4/18/02", "5/17/02", "6/4/02", "6/27/02", "7/26/02", "8/7/02",
-          "4/17/03", "5/15/03", "6/4/03", "6/27/03", "7/10/03", "7/24/03",
-          "4/19/18", "5/16/18", "6/3/18", "6/24/18", "7/9/18", "7/23/18")),
-    # Saintsbury dates
-    mdy(c("4/18/02", "5/17/02", "6/4/02", "6/27/02", "7/10/02", "7/26/02",
-          "8/7/02", "4/24/03", "5/15/03", "6/4/03", "6/27/03", "7/10/03",
-          "7/24/03", "8/9/03", "4/19/18", "5/16/18", "6/3/18", "6/24/18",
-          "7/9/18")),
-    # Quintessa dates
-    mdy(c("4/19/02", "5/3/02", "5/23/02", "6/18/02", "7/17/02", "7/29/02",
-          "4/20/03", "5/4/03", "5/18/03", "6/15/03", "7/12/03", "7/27/03",
-          "4/8/18", "5/9/18", "5/23/18", "6/18/18", "7/18/18", "8/1/18")),
-    # Veteran's Home dates
-    mdy(c("4/19/02", "5/22/02", "6/3/02", "7/1/02", "7/16/02", "7/31/02",
-          "8/12/02", "4/13/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
-          "7/27/03", "8/8/03", "4/11/18", "5/23/18", "6/15/18", "6/24/18",
-          "7/11/18", "7/25/18", "8/8/18")),
-    # Goode dates
-    mdy(c("4/22/02", "5/13/02", "6/10/02", "6/25/02", "7/8/02", "7/23/02",
-          "8/21/02", "4/24/03", "5/15/03", "6/13/03", "6/27/03", "7/10/03",
-          "7/24/03", "8/21/03", "5/7/18", "5/16/18", "6/20/18", "6/30/18",
-          "7/18/18", "7/30/18", "8/20/18")),
-    # Stag's Leap dates
-    mdy(c("5/6/02", "5/24/02", "6/17/02", "7/3/02", "7/15/02", "7/31/02",
-          "8/26/02", "5/4/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
-          "7/27/03", "9/7/03", "5/9/18", "5/23/18", "6/18/18", "7/1/18",
-          "7/11/18", "7/25/18", "9/13/18")),
-    # Wappo Hill dates
-    mdy(c("5/10/02", "5/24/02", "6/17/02", "7/3/02", "7/15/02", "7/31/02",
-          "8/26/02", "5/4/03", "5/18/03", "6/15/03", "6/29/03", "7/12/03",
-          "7/27/03", "8/24/03", "5/9/18", "5/23/18", "6/18/18", "7/1/18",
-          "7/11/18", "7/25/18", "8/22/18"))
-  )
-)
-
-# Filter the bee data to only include records from the sample dates
-bee_data_clean <- bee_data_1 %>%
-  semi_join(sample_dates, by = c("site", "date"))
-
-
-head(bee_data_clean)
-
+#Reformat dates
+bee_data_clean <- bee_data_clean %>% mutate(start_date = mdy(start_date))
+dates_to_drop <- dates_to_drop %>% mutate(date = mdy(date))
 
 #create new variable that combines the genus and species name
-
 bee_data_clean$combined_name <- paste(bee_data_clean$genus_name,bee_data_clean$species, sep=" ")
 
-#Check that samples are still correct
-cols <- c("year","site")
-bee_data_clean %>% 
-  group_by(across(all_of(cols))) %>% 
-  summarize(count_bees = sum(number))
+# ##### Code to filter 'bee_data_clean' to exclude rows matching site and date combinations in 'dates_to_drop'
+# filtered_data <- bee_data_clean %>%
+#   anti_join(dates_to_drop, by = c("site" = "site", "start_date" = "date"))
+# 
+# 
+# # Create a table summarizing the number of dates per site in bee_data_clean
+# unique_dates_filtered <- filtered_data %>%
+#   group_by(site) %>%
+#   summarize(unique_dates = n_distinct(start_date))
+
+# ####Code to check that the filtered data is correct
+# 
+# # bee_data_clean <- merge(bee_data_1, dates_to_keep, by = c("site", "start_date" = "date"))
+# 
+# # Create a table summarizing the number of dates per site in bee data clean
+# filtered_samples_site_date <- bee_data_clean %>%
+#   group_by(site, start_date) %>%
+#   summarize(bes = n())
+# samples_site_date <- bee_data_1 %>%
+#   group_by(site, start_date) %>%
+#   summarize(bes = n())
+# 
+# #Check that samples are still correct
+# 
+# sample_count_table <- bee_data_clean %>%
+#   group_by(site) %>%
+#   summarize(dates_sampled = n_distinct(date))
+# 
+# # Create a table with the dates for each site
+# dates_per_site <- bee_data_clean %>%
+#   group_by(site) %>%
+#   summarize(dates = list(unique(date)))
+# 
+# # View the dates for each site as a list with headers
+# for (i in 1:nrow(dates_per_site)) {
+#   cat("\nSite:", dates_per_site$site[i], "\n")
+#   cat(paste(dates_per_site$dates[[i]], collapse = "\n"), "\n")
+# }
+
+
 
 
 ```
@@ -145,9 +123,11 @@ bee_data_clean %>%
 ###Create data frame for BACI analysis
 
 ```{r}
+
+#Create the data frame - you can choose which data set to use here 
 sites_summary <- bee_data_clean %>%
 group_by (site, year) %>%
-    summarise(sampling_events = length(unique(date)), no_spp = length(unique(combined_name)), abund = sum(number))
+    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund = sum(number))
 
 sites_summary <- sites_summary %>%
   left_join(site_data, by = "site")
@@ -170,12 +150,13 @@ Analyze the data using the `lmer()` function to fit a linear mixed-effects model
 -   `(1 | site)` indicates that Site is a random effect to account for variability among sites.
 
 ```{r}
-# Convert Year to a factor for categorical analysis
-sites_summary$year <- factor(sites_summary$year)
+# Ensure 'year' is a factor and set 2018 as the reference level -easier way to compare both early years to 2018
+sites_summary$year <- factor(sites_summary$year, levels = c("2018", "2002", "2003"))
 
-# Fit a mixed-effects model
-model_sprich <- lmer(no_spp ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
 
+# Fit the mixed model
+model_sprich <- lmer(no_spp ~ year * treatment + (1 | site) + offset(log(sampling_events)), 
+                     data = sites_summary)
 # Summary of the model
 summary(model_sprich)
 
@@ -185,7 +166,6 @@ p_values <- summary(model_sprich)$coefficients[, "Pr(>|t|)"]
 # Print p-values
 print(p_values)
 
-
 # Plot residuals for diagnostic checking
 par(mfrow = c(2, 2))
 plot(resid(model_sprich), main = "Residuals-Species richness")
@@ -194,8 +174,16 @@ qqnorm(resid(model_sprich))
 qqline(resid(model_sprich), col = "red")
 
 
-# Here we plot the estimated means for each group for species richness
+# Plot the estimated means for each group for species richness
+# Perform pairwise comparisons using emmeans
+emm <- emmeans(model_sprich, ~ year | treatment)
+pairwise_results <- pairs(emm)
 
+# Print the pairwise comparisons
+print(pairwise_results)
+
+# Extract estimated marginal means for plotting
+emm_data <- as.data.frame(emm)
 emm_sprich <- emmeans(model_sprich, ~ year * treatment)
 plot(emm_sprich)
 pairs(emm_sprich)
@@ -203,32 +191,112 @@ pairs(emm_sprich)
 # Convert to data frame for ggplot
 emm_sprich_df <- as.data.frame(emm_sprich)
 
-# Plot the results
-plot_spprich <- ggplot(emm_sprich_df, aes(x = year, y = emmean, color = treatment)) +
+# Ensure 'year' is ordered chronologically for plotting
+emm_data$year <- factor(emm_data$year, levels = c("2002", "2003", "2018"))
+
+# Create the plot with reordered years
+ggplot(emm_data, aes(x = year, y = emmean, color = treatment, group = treatment)) +
   geom_point(size = 3) +
-  geom_line(aes(group = treatment), size = 1) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Estimated Marginal Means - Species richness",
-       x = "Year",
-       y = "Estimated Mean Value",
-       color = "treatment") +
-  theme_minimal()
-
-plot_spprich
-
-
+  geom_line(aes(linetype = treatment), size = 1) +
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) +
+  labs(
+    title = "Change in Species Richness by Treatment and Year",
+    x = "Year",
+    y = "Estimated Species Richness (no_spp)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
 
 ```
 
-Analyze the abundance in the same way.
+### Model Fit for Species Richness of Bee Community
+
+#### **REML Criterion**:
+
+```         
+-   A value of **125.5** is reported. Lower REML values indicate better fit when comparing models with the same data.
+
+-   **Scaled Residuals**: These values provide a check on model assumptions. The range from approximately **-1.62 to 1.49** suggests no extreme violations of normality or heteroscedasticity in residuals.
+```
+
+#### **Random Effects**
+
+-   **Site (Intercept)**:
+
+    -   Variance = 11.49, Std. Dev. = 3.39
+
+    -   Indicates moderate variability in the number of species across different sites.
+
+-   **Residual**:
+
+    -   Variance = 30.69, Std. Dev. = 5.54
+
+    -   Reflects the remaining variability in species richness not explained by the fixed effects or random site effect. This isn't as different as it is for abundance.
+
+#### **Fixed Effects**
+
+1.  **Intercept**:
+
+    -   Estimate: 19.025 (***p \< 0.001***)
+
+    -   Represents the number of species (`no_spp`) in the reference group (`year = 2018`, `treatment = Control`).
+
+    -   Highly significant, showing a strong baseline value.
+
+2.  **Year Effects**:
+
+    -   **Year 2002**: Estimate = 8.738 (*p = 0.0456*)
+
+        -   Species richness is significantly higher in 2002 compared to 2018 (the reference year).
+
+    -   **Year 2003**: Estimate = 2.650 (*p = 0.5116*)
+
+        -   No significant difference in species richness between 2003 and 2018.
+
+3.  **Treatment Effect**:
+
+    -   **Treatment (Impact)**: Estimate = -1.069 (*p = 0.8189*)
+
+        -   No significant overall difference in species richness between the `Control` and `Impact` treatments.
+
+4.  **Interaction Effects**:
+
+    -   **Year 2002 × Treatment Impact**: Estimate = -3.654 (*p = 0.5220*)
+
+        -   The difference in species richness between `Control` and `Impact` treatments in 2002 is not significant compared to 2018.
+
+    -   **Year 2003 × Treatment Impact**: Estimate = 1.415 (*p = 0.8027*)
+
+        -   The difference in species richness between `Control` and `Impact` treatments in 2003 is not significant compared to 2018.
+
+------------------------------------------------------------------------
+
+#### **Key Findings**
+
+1.  **Year 2002 had significantly higher species richness than 2018**, suggesting changes over time.
+
+2.  **Year 2003 did not differ significantly from 2018**, indicating that the decline in species richness may have occurred before 2003 or fluctuated over time.
+
+3.  **Treatment (Impact vs. Control)** does not significantly influence species richness, either directly or in interaction with year.
+
+4.  **Site-level variability is high**, suggesting that local factors play an essential role in species richness.
+
+#### **Analysis of Abundance**
 
 ```{r}
 
 # Response variable abundance
 
-# Fit a mixed-effects model
-model_abund <- lmer(abund ~ year * treatment + sampling_events + (1 | site), data = sites_summary)
+# Ensure 'year' is a factor and set 2018 as the reference level
+sites_summary$year <- factor(sites_summary$year, levels = c("2018", "2002", "2003"))
 
+
+# Fit the mixed model
+model_abund <- lmer(abund ~ year * treatment + (1 | site) + offset(log(sampling_events)), 
+                     data = sites_summary)
 # Summary of the model
 summary(model_abund)
 
@@ -240,113 +308,113 @@ print(p_values)
 
 # Plot residuals for diagnostic checking
 par(mfrow = c(2, 2))
-plot(resid(model_abund), main = "Residuals-Abundance")
+plot(resid(model_abund), main = "Residuals-Species richness")
 hist(resid(model_abund), main = "Histogram of Residuals", xlab = "Residuals")
 qqnorm(resid(model_abund))
 qqline(resid(model_abund), col = "red")
-# Here we plot the estimated means for each group for abundance
+
+
+# Here we plot the estimated means for each group for species richness
+# Perform pairwise comparisons using emmeans
+emm <- emmeans(model_abund, ~ year | treatment)
+pairwise_results <- pairs(emm)
+
+# Print the pairwise comparisons
+print(pairwise_results)
+
+# Extract estimated marginal means for plotting
+emm_data <- as.data.frame(emm)
 emm_abund <- emmeans(model_abund, ~ year * treatment)
-#pairs(emm_abund)
+plot(emm_abund)
+pairs(emm_abund)
 
 # Convert to data frame for ggplot
 emm_abund_df <- as.data.frame(emm_abund)
 
-# Plot the results
-plot_abund <- ggplot(emm_abund_df, aes(x = year, y = emmean, color = treatment)) +
+# Ensure 'year' is ordered chronologically for plotting
+emm_data$year <- factor(emm_data$year, levels = c("2002", "2003", "2018"))
+
+# Create the plot with reordered years
+ggplot(emm_data, aes(x = year, y = emmean, color = treatment, group = treatment)) +
   geom_point(size = 3) +
-  geom_line(aes(group = treatment), size = 1) +
-  geom_errorbar(aes(ymin = lower.CL, ymax = upper.CL), width = 0.2) +
-  labs(title = "Estimated Marginal Means - Abundance",
-       x = "Year",
-       y = "Estimated Mean Value",
-       color = "treatment") +
-  theme_minimal()
-
-plot_abund
-```
-
-###Analyze species richness using a poisson regression
-
-```{r}
-## Poisson regression model
-
-# Convert Year and treatment to factors
-
-sites_summary$treatment <- factor(sites_summary$treatment)
-
-# Fit a Poisson regression model
-poisson_model <- glmer(no_spp ~ treatment * year + sampling_events + (1 | site), data = sites_summary, family = poisson(link ="log"))
-
-# Summary of the model
-summary(poisson_model)
-
-# Check for overdispersion
-overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
-print(paste("Overdispersion ratio of poisson:", overdispersion_test))
-
-# Fit a negative binomial model
-nb_model <- glm.nb(no_spp ~ treatment * year + sampling_events, data = sites_summary)
+  geom_line(aes(linetype = treatment), size = 1) +
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) +
+  labs(
+    title = "Change in Abundance by Treatment and Year",
+    x = "Year",
+    y = "Estimated Abundance (no_specimens)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
 
 
 ```
 
-####Redo the analysis using a negative binomial
+### Model Fit for Abundance of Bees:
 
-```{r}
+-   **REML Criterion**:
 
-# Summary of the negative binomial model
-summary(nb_model)
+    -   A value of **231.3** is reported.
 
-# Extracting p-values
-p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
-print(p_values)
+    -   **Scaled Residuals**: Checks on model assumptions. The range from approximately **-1.97 to 2.52** suggests no extreme violations of normality or heteroscedasticity in residuals.
 
-# Check for overdispersion
-overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
-print(paste("Overdispersion ratio:", overdispersion_test))
+### **Random Effects**
 
+-   **Site (Variance = 4059, Std.Dev. = 63.71)**:
 
+    -   There is considerable variability in the intercept (baseline abundance) across sites.
 
+-   **Residual Variance (10932, Std.Dev. = 104.56)**:
 
-```
-#### Poisson model of abundance
+    -   The residual variability is higher than the variability between sites, suggesting much of the variation in abundance is not explained by the fixed effects or site-level grouping.
 
-```{r}
+### **Fixed Effects**
 
+The fixed effects represent the relationship between predictors (`year`, `treatment`, and their interaction) and the response variable (`abund`), accounting for random site effects and sampling effort (`offset(log(sampling_events))`).
 
-## Poisson regression model
+1.  **(Intercept) = 94.275** The baseline abundance in the reference group (e.g., the baseline year and treatment) is 94.275 after accounting for sampling effort and random site variation
 
-# Convert Year and treatment to factors
+    **Year Effects**:
 
-sites_summary$treatment <- factor(sites_summary$treatment)
+    -   **year2002 (240.988, p = 0.007)**:
 
-# Fit a Poisson regression model
-poisson_model <- glmer(abund ~ treatment * year + sampling_events + (1 | site), data = sites_summary, family = poisson(link ="log"))
+        -   Abundance is 240.988 units higher in 2002 compared to 2018, and this effect is statistically significant.
 
-# Summary of the model
-summary(poisson_model)
+    -   **year 2003 (62.65, p = 0.413)**:
 
-# Check for overdispersion
-overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
-print(paste("Overdispersion ratio of poisson:", overdispersion_test))
+        -   Abundance is 62.65 units higher in 2003 compared to 2018, and this effect is statistically significant
 
+    **Treatment Effect**:
 
-```
-#### Negative binomial model of abundance.
+    -   **treatmentImpact (7.431, p = 0.933)**:
 
+        -   Sites in the `Impact` treatment group show an increase in abundance by 7.43 units compared to the Control treatment. This effect is not statistically significant.
 
-```{r}
-# Fit a negative binomial model
-nb_model <- glm.nb(no_spp ~ treatment * year + sampling_events, data = sites_summary)
+    **Interaction Effects**:
 
-# Summary of the negative binomial model
-summary(nb_model)
+    -   **year2002:treatmentImpact (-79.65, p = 0.461)**:
 
-# Extracting p-values
-p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
-print(p_values)
+        -   The interaction between year 2002 and the `Impact` treatment suggests an additional decrease of 79.65 units in abundance, but this is also not significant.
 
-# Check for overdispersion
-overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
-print(paste("Overdispersion ratio:", overdispersion_test))
-```
+        -   **year2003:treatmentImpact (-47.83, p = 0.655)**:
+
+            -   The interaction between year 2002 and the `Impact` treatment suggests an additional increase of 79,65 units in abundance, but this is not significant.
+
+    **Significance**
+
+    -   Significant effects: **year2002** indicate significantly higher in abundance relative to 2018.
+
+    -   Non-significant effects: **treatmentImpact** and the interaction terms are not statistically significant, suggesting no strong evidence that treatment impacts abundance or that its effects vary across years.
+
+------------------------------------------------------------------------
+
+### **Key Takeaways**
+
+1.  **Year Effect**: Abundance significantly decreased from 2002 to 2018, indicating a possible temporal trend but lack of significance between 2003 and 2018 suggests decline started between 2002 and 2003. Probably worth noting the magnitude of decline even from 2003-2018.
+
+2.  **Treatment Impact**: No evidence that treatment has a direct or interactive effect on abundance.
+
+3.  **Site-Level Variation**: Substantial variation exists between sites.

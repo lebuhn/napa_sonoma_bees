@@ -1,0 +1,181 @@
+#source("~/Dropbox/napabees/R/napabees.r")#
+#
+source("/home/diego/Dropbox/napabees/data/Access_data/Vineyard_data_creation.R")#
+#
+#nettingdata.pan.net=read.table("~/Dropbox/napabees/data/Vineyard_bee_data_7Apr16_modif.csv",header=TRUE,sep=",")#
+#nettingdata=subset(nettingdata.pan.net,technique=="netting") #Select netting data#
+nettingdata=subset(nettingdata,Host.plant!="Patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="on ground")#
+nettingdata=subset(nettingdata,Host.plant!="random")#
+#
+library(bipartite) #Load library for network analyses#
+#
+SiteID.u=unique(nettingdata$SiteID) #Vector of SiteID names#
+#
+napanets=list() #Empty list to store networks for each SiteID#
+#
+split.screen(c(3,5)) #Define number of panels for plot#
+#
+#For loop to create interaction matrices#
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}#
+#dev.copy2pdf(file="~/Dropbox/napabees/figs/napaplotweb.pdf")#
+#
+#Redraw figures separating by year and vineyard type
+#source("~/Dropbox/napabees/R/napabees.r")#
+#
+source("~/Dropbox/napabees/data/Access_data/Vineyard_data_creation.R")#
+#
+#nettingdata.pan.net=read.table("~/Dropbox/napabees/data/Vineyard_bee_data_7Apr16_modif.csv",header=TRUE,sep=",")#
+#nettingdata=subset(nettingdata.pan.net,technique=="netting") #Select netting data#
+nettingdata=subset(nettingdata,Host.plant!="Patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="on ground")#
+nettingdata=subset(nettingdata,Host.plant!="random")#
+#
+library(bipartite) #Load library for network analyses#
+#
+SiteID.u=unique(nettingdata$SiteID) #Vector of SiteID names#
+#
+napanets=list() #Empty list to store networks for each SiteID#
+#
+split.screen(c(3,5)) #Define number of panels for plot#
+#
+#For loop to create interaction matrices#
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}#
+#dev.copy2pdf(file="~/Dropbox/napabees/figs/napaplotweb.pdf")#
+#
+#Redraw figures separating by year and vineyard type
+package (bipartite)
+install.packages("bipartite")
+#source("~/Dropbox/napabees/R/napabees.r")#
+#
+source("~/Dropbox/napabees/data/Access_data/Vineyard_data_creation.R")#
+#
+#nettingdata.pan.net=read.table("~/Dropbox/napabees/data/Vineyard_bee_data_7Apr16_modif.csv",header=TRUE,sep=",")#
+#nettingdata=subset(nettingdata.pan.net,technique=="netting") #Select netting data#
+nettingdata=subset(nettingdata,Host.plant!="Patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="on ground")#
+nettingdata=subset(nettingdata,Host.plant!="random")#
+#
+library(bipartite) #Load library for network analyses#
+#
+SiteID.u=unique(nettingdata$SiteID) #Vector of SiteID names#
+#
+napanets=list() #Empty list to store networks for each SiteID#
+#
+split.screen(c(3,5)) #Define number of panels for plot#
+#
+#For loop to create interaction matrices#
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}#
+#dev.copy2pdf(file="~/Dropbox/napabees/figs/napaplotweb.pdf")#
+#
+#Redraw figures separating by year and vineyard type
+#For loop to create interaction matrices#
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}
+napanets=list() #Empty list to store networks for each SiteID
+split.screen(c(3,5)) #Define number of panels for plot
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}
+source("~/Dropbox/napabees/data/Access_data/Vineyard_data_creation.R")#
+#
+#nettingdata.pan.net=read.table("~/Dropbox/napabees/data/Vineyard_bee_data_7Apr16_modif.csv",header=TRUE,sep=",")#
+#nettingdata=subset(nettingdata.pan.net,technique=="netting") #Select netting data#
+nettingdata=subset(nettingdata,Host.plant!="Patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="patrolling")#
+nettingdata=subset(nettingdata,Host.plant!="on ground")#
+nettingdata=subset(nettingdata,Host.plant!="random")#
+#
+library(bipartite) #Load library for network analyses#
+#
+SiteID.u=unique(nettingdata$SiteID) #Vector of SiteID names#
+#
+napanets=list() #Empty list to store networks for each SiteID#
+#
+split.screen(c(3,5)) #Define number of panels for plot#
+#
+#For loop to create interaction matrices#
+for (i in 1:length(SiteID.u)){#
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i#
+  napanets[[i]]=as.matrix(with(nettingdata.s,table(Host.plant,CombinedName))) #Store network for SiteID i#
+  screen(i) #Select plot panel#
+  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,#
+     col.high="blue",col.low="green")#
+  title(main=SiteID.u[i])#
+}
+names(nettingdata)
+#===========#
+#Code for importing and merging LeBuhn lab bee data from exported access files#
+#==============#
+#
+datadir="~/Dropbox/napabees/data/Access_data/"#
+#
+genus = read.csv(paste(datadir,"BeeNames1_Genus.csv",sep=""), header = TRUE)#
+species = read.csv(paste(datadir,"BeeNames2_Species.csv",sep=""), header = TRUE)#
+collection = read.csv(paste(datadir,"COLLECTION.csv",sep=""), header = TRUE)#
+conditions = read.csv(paste(datadir,"CONDITIONS.csv",sep=""), header = TRUE)#
+flowers = read.csv(paste(datadir,"Flower_Estimation.csv",sep=""), header = TRUE)#
+samples = read.csv(paste(datadir,"SAMPLE_EVENTS_FOR_VINEYARDS.csv",sep=""), header = TRUE)#
+specimens = read.csv(paste(datadir,"tblSPECIMENS.csv",sep=""), header = TRUE)#
+sites = read.csv(paste(datadir,"SITES.csv",sep=""), header = TRUE)#
+#
+#======Create merged habitat data file, each date/time/site/technique is a unique collection event#
+collectionevent <- merge(conditions, sites, by = "SiteID")#
+collectionevent <- merge(collection, collectionevent, by = "Conditionsid")#
+collectionevent <- merge(samples, collectionevent, by = "Conditionsid")#
+#str(collectionevent)#
+#
+# exclude variables #
+xcldvars <- names(collectionevent) %in% c( "SiteName.y", "date.y", "Field9", "Field10","FLAG", "Directions", "ContactInfo", "GateCombination", "BeforeGoing", "PantrapFlag", "PairCode", "Map") #
+collectionevent <-  collectionevent[!xcldvars]
+#=====Create merged specimen data file#
+#
+beename <- merge(genus, species, by ="BeeGenusID")#
+bees <- merge(specimens, beename, by = "SpeciesID" )#
+#
+#=======combine collection event data with specimen data#
+#
+beedata <- merge(bees, collectionevent, by = "collectionevent")#
+#
+#===reduce data to only Napa and Sonoma project bees#
+#
+vineyarddata <- beedata[ which(beedata$Project=='NapaSonomaVineyards'), ]#
+#
+#=====include only netting data#
+nettingdata <- vineyarddata[ which(vineyarddata$technique=='netting'),]#
+nettingdata <- nettingdata[,-which(names(nettingdata)=="Year")]

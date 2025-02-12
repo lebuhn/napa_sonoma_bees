@@ -1,0 +1,225 @@
+---
+title: "Napa_other_distribution_models"
+format: html
+editor: visual
+---
+
+## Napa Sonoma bee resurvey
+
+```{r}
+
+#| message: true
+
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(readr)
+library(lme4)
+library(lmerTest)  
+library(ggplot2)
+library(emmeans)
+library(MASS)
+
+
+```
+
+### Read in data
+
+```{r}
+#| echo: true
+#| warning: true
+
+bee_data <- read.csv("~/GitHub/napa_sonoma_bees//data/processed/bee_02-18_data.csv") 
+
+bee_traits <- read.csv("~/GitHub/napa_sonoma_bees//data/processed/bee_traits.csv", header = T)
+
+site_data <-read.csv("~/GitHub/napa_sonoma_bees//data/processed/sites.csv", header = T)
+
+#This is not the right file for removing dates
+#dates_to_keep <- read.csv("/Users/gretchen/Library/CloudStorage/Box-Box/1. Lab research/napabees/2024_update/data/raw/sample_dates_tokeep_02-18.csv", header = T) 
+
+```
+
+### Review data properties
+
+```{r}
+#| echo: true
+#| warning: true
+
+str(bee_data)
+
+```
+
+###Clean dataset
+
+Clean data set by correcting spelling for Stag's Leap and Wappo Hill preserving a subset of the columns, filter the sites to only those sites that were sampled in similar timeblocks.
+
+Check that numbers of bees per site agree after spelling correction and other modifications.
+
+```{r}
+
+#| echo: true
+#| warning: true
+
+#Fix site names
+bee_data_1 <- bee_data %>%
+
+   mutate(site = case_when (site %in% c("Wappo Hill", "Wappo hill" ) ~ "Wappo", TRUE ~ site)) %>%
+   mutate(site = case_when (site %in% c("Stag's leap", "Stags Leap", "Stag's Leap" ) ~ "Stags", TRUE ~ site)) %>%
+   mutate(site = case_when (site %in% c("Veteran's Home" ) ~ "Veterans", TRUE ~ site))
+
+bee_data_clean <- bee_data_1 %>% mutate(start_date = mdy(start_date))
+#dates_to_keep <- dates_to_keep %>% mutate(date = mdy(date))
+
+# # # Create a table summarizing the number of dates per site
+# # date_count_table <- dates_to_keep%>%
+# #   count(site, name = "number_of_dates")  # Count the number of dates for each site
+# # 
+# # # Create a table summarizing the number of dates per site in bee_data_1
+# # unique_dates_count <- bee_data_1 %>%
+# #   group_by(site) %>%
+# #   summarize(unique_dates = n_distinct(date))
+# # 
+# # 
+# # # Filter the bee data to only include records from the sample dates
+# # bee_data_clean <- bee_data_1 %>%
+# #   semi_join(dates_to_keep, by = c("start_date" = "date"))
+# 
+# # bee_data_clean <- merge(bee_data_1, dates_to_keep, by = c("site", "start_date" = "date"))
+# 
+# # Create a table summarizing the number of dates per site in bee data clean
+# filtered_samples_site_date <- bee_data_clean %>%
+#   group_by(site, start_date) %>%
+#   summarize(bes = n())
+# samples_site_date <- bee_data_1 %>%
+#   group_by(site, start_date) %>%
+#   summarize(bes = n())
+# 
+# #Check that samples are still correct
+# 
+# sample_count_table <- bee_data_clean %>%
+#   group_by(site) %>%
+#   summarize(dates_sampled = n_distinct(date))
+# 
+# # Create a table with the dates for each site
+# dates_per_site <- bee_data_clean %>%
+#   group_by(site) %>%
+#   summarize(dates = list(unique(date)))
+# 
+# # View the dates for each site as a list with headers
+# for (i in 1:nrow(dates_per_site)) {
+#   cat("\nSite:", dates_per_site$site[i], "\n")
+#   cat(paste(dates_per_site$dates[[i]], collapse = "\n"), "\n")
+# }
+
+#create new variable that combines the genus and species name
+
+bee_data_clean$combined_name <- paste(bee_data_clean$genus_name,bee_data_clean$species, sep=" ")
+
+
+```
+
+###Create data frame for BACI analysis
+
+```{r}
+sites_summary <- bee_data_clean %>%
+group_by (site, year) %>%
+    summarise(sampling_events = length(unique(start_date)), no_spp = length(unique(combined_name)), abund = sum(number))
+
+sites_summary <- sites_summary %>%
+  left_join(site_data, by = "site")
+
+sites_summary
+
+
+```
+
+##Analyze species richness using a poisson regression
+
+```{r}
+## Poisson regression model
+
+# Convert Year and treatment to factors
+
+sites_summary$treatment <- factor(sites_summary$treatment)
+
+# Fit a Poisson regression model with an offset for sampling effort
+poisson_model <- glmer(no_spp ~ treatment * year + (1 | site) + offset(log(sampling_events)), 
+                       data = sites_summary, 
+                       family = poisson(link = "log"))
+
+# Summary of the model
+summary(poisson_model)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
+print(paste("Overdispersion ratio of poisson:", overdispersion_test))
+
+# Fit a negative binomial model with an offset for sampling effort
+nb_model <- glm.nb(no_spp ~ treatment * year + offset(log(sampling_events)), 
+                   data = sites_summary)
+
+
+```
+
+####Redo the analysis using a negative binomial
+
+```{r}
+
+# Summary of the negative binomial model
+summary(nb_model)
+
+# Extracting p-values
+p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
+print(p_values)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
+print(paste("Overdispersion ratio:", overdispersion_test))
+
+
+
+
+```
+
+#### Poisson model of abundance
+
+```{r}
+
+
+## Poisson regression model
+
+# Convert Year and treatment to factors
+
+sites_summary$treatment <- factor(sites_summary$treatment)
+
+# Fit a Poisson regression model
+poisson_model <- glmer(abund ~ treatment * year  + (1 | site), data = sites_summary, family = poisson(link ="log"))
+
+# Summary of the model
+summary(poisson_model)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(poisson_model, type = "pearson")^2) / df.residual(poisson_model)
+print(paste("Overdispersion ratio of poisson:", overdispersion_test))
+
+
+```
+
+#### Negative binomial model of abundance.
+
+```{r}
+# Fit a negative binomial model
+nb_model <- glm.nb(no_spp ~ treatment * year , data = sites_summary)
+
+# Summary of the negative binomial model
+summary(nb_model)
+
+# Extracting p-values
+p_values <- summary(nb_model)$coefficients[, "Pr(>|z|)"]
+print(p_values)
+
+# Check for overdispersion
+overdispersion_test <- sum(residuals(nb_model, type = "pearson")^2) / df.residual(nb_model)
+print(paste("Overdispersion ratio:", overdispersion_test))
+```

@@ -1,0 +1,71 @@
+ 
+#source("~/Dropbox/napabees/R/napabees.r")
+
+source("~/Dropbox/napabees/data/Access_data/Vineyard_data_creation.R")
+
+#nettingdata.pan.net=read.table("~/Dropbox/napabees/dataVineyard_bee_data_7Apr16_modif.csv",header=TRUE,sep=",")
+#nettingdata=subset(nettingdata.pan.net,technique=="netting") #Select netting data
+nettingdata=subset(nettingdata,Host.plant!="Patrolling")
+nettingdata=subset(nettingdata,Host.plant!="patrolling")
+nettingdata=subset(nettingdata,Host.plant!="on ground")
+nettingdata=subset(nettingdata,Host.plant!="random")
+nettingdata=subset(nettingdata,year!=2001)
+nettingdata$SiteID=factor(nettingdata$SiteID)
+nettingdata$CombinedName=factor(nettingdata$CombinedName)
+nettingdata$Host.plant=factor(nettingdata$Host.plant)
+
+library(bipartite) #Load library for network analyses
+library(gdata)
+
+SiteID.u=unique(nettingdata$SiteID) #Vector of SiteID names
+year.u=unique(nettingdata$year) #Vector of year
+event.u=unique(nettingdata$event) #Vector of events
+m = 1 #creates index for napanets
+
+#SiteID.u=unique("nettingdata$SiteID", "year") #Vector of SiteID names
+napanets=list() #Empty list to store networks for each SiteID
+napanetsv=list()
+napanetsm1=list()
+
+#split.screen(c(3,5)) #Define number of panels for plot
+
+#For loop to create interaction matrices
+for (i in 1:length(SiteID.u)){
+  for( j in 1:length(year.u)){
+      for (k in 1:length(event.u)){
+  
+  nettingdata.s=nettingdata[which(nettingdata$SiteID==SiteID.u[i]),] #Subset of records for SiteID i
+  nettingdata.sy=nettingdata.s[which(nettingdata.s$year==year.u[j]),] #Subset of records for year j within SiteID i
+  nettingdata.sye=nettingdata.sy[which(nettingdata.sy$event==event.u[k]),] #Subset of records for event k within year j
+  
+  napanets[[m]]=as.matrix(with(nettingdata.sye,table(Host.plant,CombinedName)))#Store network for SiteID i
+
+  
+ m = m+1
+  #  screen(i) #Select plot panel
+#  plotweb(napanets[[i]],method="normal",empty=FALSE,low.lablength=0,high.lablength=0,
+#     col.high="blue",col.low="green")
+#  title(main=SiteID.u[i])
+}}}
+
+n=1
+napanetsv=matrix(0,length(napanets),length(napanets[[1]]))
+for (n in 1:length(napanets)){
+  #napanetsv[[n]]=unmatrix(napanets[[n]]) #convert matrix to vector
+  napanetsv[n,]=unmatrix(napanets[[n]]) #convert matrix to vector
+  n=n+1
+}
+napanetsm1=lapply(napanetsv, as.numeric)
+
+#napanetsm=(as.matrix(napanetsv)) # converts napanets data to matrix
+# napanetsm=(unname(napanetsm)) # removes the names from the matrix
+
+braynapa=vegdist(napanetsm1) # Calculate Bray-Curtis values
+
+#pull out values below diagonal.  This works even though there is a subscript error. Matrix is currently named x.
+x<-matrix(seq(1:25),5,5)
+bcvalues = list() 
+i=1
+for (i in 1:nrow(x)){
+  bcvalues[i] = x[i+1, i]
+}

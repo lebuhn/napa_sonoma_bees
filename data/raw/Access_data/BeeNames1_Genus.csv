@@ -1,0 +1,128 @@
+BeeGenusID,GenusName,BeeTribeID,TribeName,SubFamilyName,FamilyName,TribeCode
+0,Anthidiellum,136,No Tribe,No Subfamily,Unknown,
+1,Agapanthinus,43,Eucerini,Apinae,Apidae,652
+2,Agapostemon,46,Halictini,Halictinae,Halictidae,320
+3,Ancylandrena,126,No Tribe Andreninae,Andreninae,Andrenidae,211
+4,Ancyloscelis,5,Exomalopsini,Apinae,Apidae,650
+5,Andrena,126,No Tribe Andreninae,Andreninae,Andrenidae,211
+6,Anthedonia,43,Eucerini,Apinae,Apidae,652
+7,Anthemurgus,8,Protandrenini,Panurginae,Andrenidae,221
+8,Anthidiellum,9,Anthidiini,Megachilinae,Megachildae,521
+9,Anthidium,9,Anthidiini,Megachilinae,Megachildae,521
+10,Anthophora,50,Anthophorini,Apinae,Apidae,644
+11,Anthophorula,5,Exomalopsini,Apinae,Apidae,650
+12,Apis,13,Apini,Apinae,Apidae,658
+13,Ashmeadiella,58,Osmini,Megachilinae,Megachildae,524
+14,Atoposmia,58,Osmini,Megachilinae,Megachildae,524
+15,Augochlora,16,Augochlorini,Halictinae,Halictidae,310
+16,Augochlorella,16,Augochlorini,Halictinae,Halictidae,310
+17,Augochloropsis,16,Augochlorini,Halictinae,Halictidae,310
+18,Bombus,19,Bombini,Apinae,Apidae,657
+19,Brachynomada,89,Brachynomadini,Nomadinae,Apidae,615
+20,Calliopsis,21,Calliopsini,Panurginae,Andrenidae,226
+21,Caupolicana,22,Caupolicanini,Diphaglossinae,Colletidae,111
+22,Cemolobus,43,Eucerini,Apinae,Apidae,652
+23,Centris,24,Centridini,Apinae,Apidae,643
+24,Ceratina,25,Ceratinini,Xylocopinae,Apidae,631
+25,Chalicodoma,66,Megachilini,Megachilinae,Megachildae,523
+26,Chelostoma,58,Osmini,Megachilinae,Megachildae,524
+27,Coelioxys,66,Megachilini,Megachilinae,Megachildae,523
+28,Colletes,133,No Tribe Colletinae,Colletinae,Colletidae,101
+29,Conanthalictus,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+30,Diadasia,31,Emphorini,Apinae,Apidae,653
+31,Dialictus,46,Halictini,Halictinae,Halictidae,320
+32,Dianthidium,9,Anthidiini,Megachilinae,Megachildae,521
+33,Dieunomia,131,No Tribe Nomiinae,Nomiinae,Halictidae,330
+34,Dioxys,35,Dioxyini,Megachilinae,Megachildae,522
+35,Triepeolus,41,Epeolini,Nomadinae,Apidae,620
+36,Dolichochile,132,No Tribe Melittinae,Melittinae,Mellitidae,420
+37,Dolichostelis,9,Anthidiini,Megachilinae,Megachildae,521
+38,Dufourea,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+39,Epeoloides,40,Osirini,Apinae,Apidae,647
+40,Epeolus,41,Epeolini,Nomadinae,Apidae,620
+41,Ericrocis,42,Ericrocidini,Apinae,Apidae,645
+42,Eucera,43,Eucerini,Apinae,Apidae,652
+43,Eulaema,44,Euglossini,Apinae,Apidae,655
+44,Eulonchopria,133,No Tribe Colletinae,Colletinae,Colletidae,101
+45,Evylaeus,46,Halictini,Halictinae,Halictidae,320
+46,Exomalopsis,5,Exomalopsini,Apinae,Apidae,650
+47,Florilegus,43,Eucerini,Apinae,Apidae,652
+48,Gaesischia,43,Eucerini,Apinae,Apidae,652
+49,Habropoda,50,Anthophorini,Apinae,Apidae,644
+50,Halictus,46,Halictini,Halictinae,Halictidae,320
+51,Hemihalictus,46,Halictini,Halictinae,Halictidae,320
+52,Heriades,58,Osmini,Megachilinae,Megachildae,524
+53,Hesperapis,54,Dasypodaini,Dasypodinae,Mellitidae,410
+54,Heterosarus,8,Protandrenini,Panurginae,Andrenidae,221
+55,Hexepeolus,56,Hexepeolini,Nomadinae,Apidae,615
+56,Holcopasites,57,Ammobatoidini,Nomadinae,Apidae,618
+57,Hoplitis,58,Osmini,Megachilinae,Megachildae,524
+58,Hylaeus,134,No Tribe Hylaeinae,Hylaeinae,Colletidae,121
+59,Lasioglossum,46,Halictini,Halictinae,Halictidae,320
+60,Leiopodus,61,Protepeolini,Apinae,Apidae,648
+61,Lithurge,62,Lithurgini,Megachilinae,Megachildae,510
+62,Macropis,132,No Tribe Melittinae,Melittinae,Mellitidae,420
+63,Macrotera,64,Perditini,Panurginae,Andrenidae,225
+64,Martinapis,43,Eucerini,Apinae,Apidae,652
+65,Megachile,66,Megachilini,Megachilinae,Megachildae,523
+66,Megandrena,126,No Tribe Andreninae,Andreninae,Andrenidae,211
+67,Melecta,68,Melectini,Apinae,Apidae,646
+68,Melissodes,43,Eucerini,Apinae,Apidae,652
+69,Melissoptila,43,Eucerini,Apinae,Apidae,652
+70,Melitoma,31,Emphorini,Apinae,Apidae,653
+71,Melitta,132,No Tribe Melittinae,Melittinae,Mellitidae,420
+72,Mesoplia,42,Ericrocidini,Apinae,Apidae,645
+73,Mesoxaea,127,No Tribe Oxaeinae,Oxaeinae,Andrenidae,231
+74,Metapsaenythia,8,Protandrenini,Panurginae,Andrenidae,221
+75,Mexalictus,46,Halictini,Halictinae,Halictidae,320
+76,Michenerula,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+77,Micralictoides,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+78,Neolarra,79,Neolarrini,Nomadinae,Apidae,613
+79,Neopasites,80,Biastini,Nomadinae,Apidae,616
+80,Nomada,81,Nomadini,Nomadinae,Apidae,615
+81,Nomia,131,No Tribe Nomiinae,Nomiinae,Halictidae,330
+82,Odyneropsis,41,Epeolini,Nomadinae,Apidae,620
+83,Odynerus,41,Epeolini,Nomadinae,Apidae,620
+84,Oreopasites,85,Ammobatini,Nomadinae,Apidae,611
+85,Osmia,58,Osmini,Megachilinae,Megachildae,524
+86,Panurginus,87,Panurgini,Panurginae,Andrenidae,222
+87,Paralictus,46,Halictini,Halictinae,Halictidae,320
+88,Paranomada,89,Brachynomadini,Nomadinae,Apidae,615
+89,Paranthidium,9,Anthidiini,Megachilinae,Megachildae,521
+90,Peponapis,43,Eucerini,Apinae,Apidae,652
+91,Perdita,64,Perditini,Panurginae,Andrenidae,225
+92,Protandrena,8,Protandrenini,Panurginae,Andrenidae,221
+93,Protodufourea,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+94,Protosmia,58,Osmini,Megachilinae,Megachildae,524
+95,Protostelis,9,Anthidiini,Megachilinae,Megachildae,521
+96,Protoxaea,127,No Tribe Oxaeinae,Oxaeinae,Andrenidae,231
+97,Pseudaugochloropsis,16,Augochlorini,Halictinae,Halictidae,310
+98,Pseudopanurgus,8,Protandrenini,Panurginae,Andrenidae,221
+99,Psithyrus,19,Bombini,Apinae,Apidae,657
+100,Ptiloglossa,22,Caupolicanini,Diphaglossinae,Colletidae,111
+101,Ptilothrix,31,Emphorini,Apinae,Apidae,653
+102,Rhopalolemma,80,Biastini,Nomadinae,Apidae,616
+103,Simanthedon,43,Eucerini,Apinae,Apidae,652
+104,Sphecodes,46,Halictini,Halictinae,Halictidae,320
+105,Sphecodogastra,46,Halictini,Halictinae,Halictidae,320
+106,Sphecodosoma,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+107,Stelis,9,Anthidiini,Megachilinae,Megachildae,521
+108,Svastra,43,Eucerini,Apinae,Apidae,652
+109,Synhalonia,43,Eucerini,Apinae,Apidae,652
+110,Syntrichalonia,43,Eucerini,Apinae,Apidae,652
+111,Temnosoma,16,Augochlorini,Halictinae,Halictidae,310
+112,Tetraloniella,43,Eucerini,Apinae,Apidae,652
+113,Townsendiella,114,Townsendiellini,Nomadinae,Apidae,614
+114,Trachusa,9,Anthidiini,Megachilinae,Megachildae,521
+115,Triepeolus,41,Epeolini,Nomadinae,Apidae,620
+116,Triopasites,89,Brachynomadini,Nomadinae,Apidae,615
+117,Xenoglossa,43,Eucerini,Apinae,Apidae,652
+118,Xenoglossodes,43,Eucerini,Apinae,Apidae,652
+119,Xenopanurgus,8,Protandrenini,Panurginae,Andrenidae,221
+120,Xeralictus,130,No Tribe Rophitinae,Rophitinae,Halictidae,320
+121,Xeroheriades,58,Osmini,Megachilinae,Megachildae,524
+122,Xeromelecta,68,Melectini,Apinae,Apidae,646
+123,Xylocopa,124,Xylocopini,Xylocopinae,Apidae,632
+124,Zacosmia,68,Melectini,Apinae,Apidae,646
+125,Pseudomasaris,135,Wasp,Wasp,Wasp,231
+126,Wasp,135,Wasp,Wasp,Wasp,231
