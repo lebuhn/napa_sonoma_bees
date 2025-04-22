@@ -30,14 +30,14 @@ library(MASS)
 #| echo: true
 #| warning: true
 
-bee_data <- read.csv("/~/GitHub/napa_sonoma_bees/data/processed/bee_02-18_data.csv") 
+bee_data <- read.csv("../data/processed/bee_02-18_data.csv") 
 
-bee_traits <- read.csv("~/GitHub/napa_sonoma_bees/data/processed/bee_traits.csv", header = T)
+bee_traits <- read.csv("../data/processed/bee_traits.csv", header = T)
 
-site_data <-read.csv("~/GitHub/napa_sonoma_bees/data/processed/sites.csv", header = T)
+site_data <-read.csv("../data/processed/sites.csv", header = T)
 
 #This is the file for removing dates
-dates_to_drop <- read.csv("~/GitHub/napa_sonoma_bees/data/processed/02_03_18_datestodrop.csv", header = T) 
+dates_to_drop <- read.csv("../data/processed/02_03_18_datestodrop.csv", header = T) 
 
 ```
 

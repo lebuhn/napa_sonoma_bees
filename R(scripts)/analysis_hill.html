@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.5.57">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Bee Diversity Analysis using MeanRarity</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="analysis_hill_files/libs/clipboard/clipboard.min.js"></script>
+<script src="analysis_hill_files/libs/quarto-html/quarto.js"></script>
+<script src="analysis_hill_files/libs/quarto-html/popper.min.js"></script>
+<script src="analysis_hill_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="analysis_hill_files/libs/quarto-html/anchor.min.js"></script>
+<link href="analysis_hill_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="analysis_hill_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="analysis_hill_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="analysis_hill_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="analysis_hill_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Bee Diversity Analysis using MeanRarity</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="analyzing-bee-diversity-in-a-baci-study-design" class="level1">
+<h1>Analyzing Bee Diversity in a BACI Study Design</h1>
+<p>This analysis uses the methods described in Roswell et al.&nbsp;(2021) to analyze bee diversity across multiple sites in a Before-After-Control-Impact (BACI) design. We’ll use coverage standardization and Hill diversity metrics to provide a robust comparison of bee diversity.</p>
+<section id="setup" class="level2">
+<h2 class="anchored" data-anchor-id="setup">Setup</h2>
+<p>First, we’ll load the necessary packages and read in our data.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load required packages</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(MeanRarity)  <span class="co"># For calculating Hill diversity metrics</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(iNEXT)       <span class="co"># For coverage-based rarefaction</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)       <span class="co"># For data manipulation</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)       <span class="co"># For reshaping data</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)     <span class="co"># For visualization</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lubridate)   <span class="co"># For date handling</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lme4)        <span class="co"># For mixed-effects models</span></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(lmerTest)    <span class="co"># For p-values in mixed models</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(emmeans)     <span class="co"># For estimated marginal means</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Read in the data</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>bee_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"../data/processed/bee_02-18_data.csv"</span>) </span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a>bee_traits <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"../data/processed/bee_traits.csv"</span>, <span class="at">header =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>site_data <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"../data/processed/sites.csv"</span>, <span class="at">header =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>dates_to_drop <span class="ot">&lt;-</span> <span class="fu">read.csv</span>(<span class="st">"../data/processed/02_03_18_datestodrop.csv"</span>, <span class="at">header =</span> <span class="cn">TRUE</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="data-cleaning" class="level2">
+<h2 class="anchored" data-anchor-id="data-cleaning">Data Cleaning</h2>
+<p>Next, we’ll clean up the data, standardizing site names and formatting dates.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>'data.frame':   3020 obs. of  11 variables:
+ $ barcode      : int  20020087 20020088 20020089 20020090 20020091 20020092 20020094 20020095 20020096 20020097 ...
+ $ genus_name   : chr  "Andrena" "Nomada" "Nomada" "Eucera" ...
+ $ species      : chr  "sp. 6" "sp. 3" "sp. 10" "frater" ...
+ $ site         : chr  "Goode" "Goode" "Goode" "Goode" ...
+ $ start_date   : Date, format: "2002-03-26" "2002-03-26" ...
+ $ type         : chr  "Male" "Female" "Female" "Male" ...
+ $ det          : chr  "R. W. Brooks" "R. W. Brooks" "R. W. Brooks" "R. W. Brooks" ...
+ $ year         : int  2002 2002 2002 2002 2002 2002 2002 2002 2002 2002 ...
+ $ number       : int  1 1 1 1 1 1 1 1 1 1 ...
+ $ technique    : chr  "netting" "netting" "netting" "netting" ...
+ $ combined_name: chr  "Andrena sp. 6" "Nomada sp. 3" "Nomada sp. 10" "Eucera frater" ...</code></pre>
+</div>
+</div>
+</section>
+<section id="preparing-data-for-diversity-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="preparing-data-for-diversity-analysis">Preparing Data for Diversity Analysis</h2>
+<p>To calculate Hill diversity metrics, we need to create a matrix of species abundances per site and year.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">#l warning = FALSE</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">#l echo = FALSE</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Create a wide-format abundance matrix for diversity analysis</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Each row is a site-year combination, columns are species</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>abundance_matrix <span class="ot">&lt;-</span> bee_data_clean <span class="sc">%&gt;%</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(site, year, combined_name) <span class="sc">%&gt;%</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Sum abundance of each species at each site-year</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarize</span>(<span class="at">abundance =</span> <span class="fu">sum</span>(number), <span class="at">.groups =</span> <span class="st">"drop"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Convert to wide format: species as columns</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">id_cols =</span> <span class="fu">c</span>(site, year),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_from =</span> combined_name,</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_from =</span> abundance,</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_fill =</span> <span class="dv">0</span>  <span class="co"># Fill missing species with 0</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Safely extract site_year_ids with base R</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>site_year_ids <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">site =</span> abundance_matrix<span class="sc">$</span>site,</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">year =</span> abundance_matrix<span class="sc">$</span>year</span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a><span class="co"># Safely create abundance_values matrix</span></span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a><span class="co"># This avoids issues with special characters in species names</span></span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a>abundance_values <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(abundance_matrix[, <span class="dv">3</span><span class="sc">:</span><span class="fu">ncol</span>(abundance_matrix)])</span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a><span class="co"># Check dimensions</span></span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Number of site-year combinations:"</span>, <span class="fu">nrow</span>(site_year_ids), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of site-year combinations: 24 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Number of species columns:"</span>, <span class="fu">ncol</span>(abundance_values), <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Number of species columns: 157 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add metadata about sampling effort</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>sampling_effort <span class="ot">&lt;-</span> bee_data_clean <span class="sc">%&gt;%</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">group_by</span>(site, year) <span class="sc">%&gt;%</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">sampling_events =</span> <span class="fu">n_distinct</span>(start_date))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>`summarise()` has grouped output by 'site'. You can override using the
+`.groups` argument.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Add treatment information from site_data</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>site_metadata <span class="ot">&lt;-</span> site_year_ids <span class="sc">%&gt;%</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(sampling_effort, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"site"</span>, <span class="st">"year"</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(site_data <span class="sc">%&gt;%</span> dplyr<span class="sc">::</span><span class="fu">select</span>(site, treatment), <span class="at">by =</span> <span class="st">"site"</span>)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="fu">head</span>(site_metadata)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>               site year sampling_events treatment
+1 Bouverie Preserve 2002               8    Impact
+2 Bouverie Preserve 2003               7    Impact
+3 Bouverie Preserve 2018               8    Impact
+4             Goode 2002              11   Control
+5             Goode 2003               8   Control
+6             Goode 2018               9   Control</code></pre>
+</div>
+</div>
+</section>
+<section id="coverage-based-standardization" class="level2">
+<h2 class="anchored" data-anchor-id="coverage-based-standardization">Coverage-based Standardization</h2>
+<p>According to Roswell et al.&nbsp;(2021), coverage is a more robust way to standardize samples than equal effort or equal sample size. Coverage estimates what proportion of the total community (including undetected species) is represented in our sample.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate coverage for each site-year combination</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>site_coverage <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(site_year_ids, </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>                           <span class="at">coverage =</span> <span class="fu">apply</span>(abundance_values, <span class="dv">1</span>, <span class="cf">function</span>(x) {</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>                             <span class="co"># Count singletons (species with only 1 individual)</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>                             f1 <span class="ot">&lt;-</span> <span class="fu">sum</span>(x <span class="sc">==</span> <span class="dv">1</span>)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>                             <span class="co"># Get total number of individuals</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>                             n <span class="ot">&lt;-</span> <span class="fu">sum</span>(x)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                             <span class="co"># Calculate coverage using the formula from Chao and Jost (2012)</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>                             <span class="cf">if</span> (f1 <span class="sc">==</span> <span class="dv">0</span>) {</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">return</span>(<span class="dv">1</span>) <span class="co"># Perfect coverage if no singletons</span></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>                             } <span class="cf">else</span> {</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>                               <span class="fu">return</span>(<span class="dv">1</span> <span class="sc">-</span> (f1<span class="sc">/</span>n) <span class="sc">*</span> ((n<span class="dv">-1</span>)<span class="sc">/</span>n))</span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>                             }</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>                           }))</span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Find the minimum coverage across all site-years (to use as standardization point)</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a>min_coverage <span class="ot">&lt;-</span> <span class="fu">min</span>(site_coverage<span class="sc">$</span>coverage)</span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Minimum coverage across all site-years:"</span>, min_coverage, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Minimum coverage across all site-years: 0.7696 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Display coverage by site and year</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>site_coverage <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(coverage) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  knitr<span class="sc">::</span><span class="fu">kable</span>(<span class="at">caption =</span> <span class="st">"Sample coverage by site and year"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<caption>Sample coverage by site and year</caption>
+<thead>
+<tr class="header">
+<th style="text-align: left;">site</th>
+<th style="text-align: right;">year</th>
+<th style="text-align: right;">coverage</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Quintessa</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.7696000</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hudson</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.8310204</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Quintessa</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.8630401</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Bouverie Preserve</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.8750139</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Veterans</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.8889178</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Veterans</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.8955464</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Saintsbury</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9043552</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Stags</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9109000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bouverie Preserve</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9121662</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Goode</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.9130481</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Saintsbury</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.9222320</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Goode</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9222819</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Wappo</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.9240537</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Stags</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.9289966</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Hudson</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9337374</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Goode</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9381114</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Stags</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9433975</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Quintessa</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9554158</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Bouverie Preserve</td>
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">0.9555612</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Hudson</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9577470</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Veterans</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9584780</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Wappo</td>
+<td style="text-align: right;">2003</td>
+<td style="text-align: right;">0.9735688</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Saintsbury</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9857483</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Wappo</td>
+<td style="text-align: right;">2002</td>
+<td style="text-align: right;">0.9897810</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="calculating-hill-diversity-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="calculating-hill-diversity-metrics">Calculating Hill Diversity Metrics</h2>
+<p>Hill diversity unifies different diversity metrics (richness, Shannon, Simpson) into a common framework. The parameter ℓ (or q in some literature) determines how much weight is given to rare versus common species.</p>
+<p>The MeanRarity package uses parameter q in its code implementation, while their conceptual framework in the paper uses ℓ. The relationship between them is ℓ = 1-q, so:</p>
+<p>Species richness: ℓ=1 corresponds to q=0 Hill-Shannon: ℓ=0 corresponds to q=1 Hill-Simpson: ℓ=-1 corresponds to q=2</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Function to calculate Hill diversity metrics for each site-year</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>calculate_diversity_metrics <span class="ot">&lt;-</span> <span class="cf">function</span>() {</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  diversity_results <span class="ot">&lt;-</span> <span class="fu">data.frame</span>()</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(site_year_ids)) {</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>    site_id <span class="ot">&lt;-</span> site_year_ids<span class="sc">$</span>site[i]</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    yr <span class="ot">&lt;-</span> site_year_ids<span class="sc">$</span>year[i]</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Extract abundance data for this site-year</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>    site_data_vec <span class="ot">&lt;-</span> abundance_values[i, ]</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a>    site_data_vec <span class="ot">&lt;-</span> site_data_vec[site_data_vec <span class="sc">&gt;</span> <span class="dv">0</span>]  <span class="co"># Remove zeros</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Calculate raw Hill diversity using the rarity function from MeanRarity</span></span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a>    richness_raw <span class="ot">&lt;-</span> <span class="fu">rarity</span>(site_data_vec, <span class="at">q =</span> <span class="dv">0</span>)</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a>    hill_shannon_raw <span class="ot">&lt;-</span> <span class="fu">rarity</span>(site_data_vec, <span class="at">q =</span> <span class="dv">1</span>)</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a>    hill_simpson_raw <span class="ot">&lt;-</span> <span class="fu">rarity</span>(site_data_vec, <span class="at">q =</span> <span class="dv">2</span>)</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Use iNEXT to estimate diversity at standardized coverage</span></span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a>    inext_result <span class="ot">&lt;-</span> <span class="fu">estimateD</span>(site_data_vec, <span class="at">datatype =</span> <span class="st">"abundance"</span>, </span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a>                             <span class="at">base =</span> <span class="st">"coverage"</span>, <span class="at">level =</span> min_coverage)</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a>    <span class="co"># The issue is in extracting values from inext_result</span></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Print the structure to understand how to access the values</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a>    <span class="co"># print(str(inext_result))</span></span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Get the values in the correct way</span></span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a>    <span class="co"># iNEXT results are sorted by order (0, 1, 2)</span></span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a>    richness_std <span class="ot">&lt;-</span> inext_result<span class="sc">$</span>qD[<span class="dv">1</span>]     <span class="co"># First row is q=0 (richness)</span></span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a>    hill_shannon_std <span class="ot">&lt;-</span> inext_result<span class="sc">$</span>qD[<span class="dv">2</span>] <span class="co"># Second row is q=1 (Shannon)</span></span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a>    hill_simpson_std <span class="ot">&lt;-</span> inext_result<span class="sc">$</span>qD[<span class="dv">3</span>] <span class="co"># Third row is q=2 (Simpson)</span></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Combine with existing metadata</span></span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a>    result_row <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a>      <span class="at">site =</span> site_id,</span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a>      <span class="at">year =</span> yr,</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a>      <span class="at">raw_richness =</span> richness_raw,</span>
+<span id="cb14-37"><a href="#cb14-37" aria-hidden="true" tabindex="-1"></a>      <span class="at">raw_hill_shannon =</span> hill_shannon_raw,</span>
+<span id="cb14-38"><a href="#cb14-38" aria-hidden="true" tabindex="-1"></a>      <span class="at">raw_hill_simpson =</span> hill_simpson_raw,</span>
+<span id="cb14-39"><a href="#cb14-39" aria-hidden="true" tabindex="-1"></a>      <span class="at">std_richness =</span> richness_std,</span>
+<span id="cb14-40"><a href="#cb14-40" aria-hidden="true" tabindex="-1"></a>      <span class="at">std_hill_shannon =</span> hill_shannon_std,</span>
+<span id="cb14-41"><a href="#cb14-41" aria-hidden="true" tabindex="-1"></a>      <span class="at">std_hill_simpson =</span> hill_simpson_std,</span>
+<span id="cb14-42"><a href="#cb14-42" aria-hidden="true" tabindex="-1"></a>      <span class="at">coverage =</span> site_coverage<span class="sc">$</span>coverage[i]</span>
+<span id="cb14-43"><a href="#cb14-43" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb14-44"><a href="#cb14-44" aria-hidden="true" tabindex="-1"></a>    </span>
+<span id="cb14-45"><a href="#cb14-45" aria-hidden="true" tabindex="-1"></a>    <span class="co"># Append to the result data frame</span></span>
+<span id="cb14-46"><a href="#cb14-46" aria-hidden="true" tabindex="-1"></a>    diversity_results <span class="ot">&lt;-</span> <span class="fu">rbind</span>(diversity_results, result_row)</span>
+<span id="cb14-47"><a href="#cb14-47" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb14-48"><a href="#cb14-48" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-49"><a href="#cb14-49" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Add metadata about treatment and sampling effort</span></span>
+<span id="cb14-50"><a href="#cb14-50" aria-hidden="true" tabindex="-1"></a>  diversity_results <span class="ot">&lt;-</span> diversity_results <span class="sc">%&gt;%</span></span>
+<span id="cb14-51"><a href="#cb14-51" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(site_metadata, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">"site"</span>, <span class="st">"year"</span>))</span>
+<span id="cb14-52"><a href="#cb14-52" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb14-53"><a href="#cb14-53" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(diversity_results)</span>
+<span id="cb14-54"><a href="#cb14-54" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb14-55"><a href="#cb14-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-56"><a href="#cb14-56" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate diversity metrics</span></span>
+<span id="cb14-57"><a href="#cb14-57" aria-hidden="true" tabindex="-1"></a>diversity_results <span class="ot">&lt;-</span> <span class="fu">calculate_diversity_metrics</span>()</span>
+<span id="cb14-58"><a href="#cb14-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-59"><a href="#cb14-59" aria-hidden="true" tabindex="-1"></a><span class="co"># Create factors for time period and ensure proper ordering</span></span>
+<span id="cb14-60"><a href="#cb14-60" aria-hidden="true" tabindex="-1"></a>diversity_results<span class="sc">$</span>period <span class="ot">&lt;-</span> <span class="fu">ifelse</span>(diversity_results<span class="sc">$</span>year <span class="sc">==</span> <span class="st">"2018"</span>, <span class="st">"After"</span>, <span class="st">"Before"</span>)</span>
+<span id="cb14-61"><a href="#cb14-61" aria-hidden="true" tabindex="-1"></a>diversity_results<span class="sc">$</span>period <span class="ot">&lt;-</span> <span class="fu">factor</span>(diversity_results<span class="sc">$</span>period, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Before"</span>, <span class="st">"After"</span>))</span>
+<span id="cb14-62"><a href="#cb14-62" aria-hidden="true" tabindex="-1"></a>diversity_results<span class="sc">$</span>treatment <span class="ot">&lt;-</span> <span class="fu">factor</span>(diversity_results<span class="sc">$</span>treatment, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Control"</span>, <span class="st">"Impact"</span>))</span>
+<span id="cb14-63"><a href="#cb14-63" aria-hidden="true" tabindex="-1"></a>diversity_results<span class="sc">$</span>year <span class="ot">&lt;-</span> <span class="fu">factor</span>(diversity_results<span class="sc">$</span>year, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"2002"</span>, <span class="st">"2003"</span>, <span class="st">"2018"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="visualizing-diversity-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="visualizing-diversity-metrics">Visualizing Diversity Metrics</h2>
+<p>Now let’s visualize the diversity results to better understand the patterns across sites, years, and treatments.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualize Hill-Shannon diversity (standardized by coverage)</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(diversity_results, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> std_hill_shannon, <span class="at">color =</span> treatment, <span class="at">group =</span> site)) <span class="sc">+</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Hill-Shannon Diversity (Coverage-Standardized)"</span>,</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Year"</span>, </span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Hill-Shannon Diversity (q=1)"</span>) <span class="sc">+</span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="analysis_hill_files/figure-html/visualize_diversity-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Compare all three diversity metrics</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>diversity_long <span class="ot">&lt;-</span> diversity_results <span class="sc">%&gt;%</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">c</span>(std_richness, std_hill_shannon, std_hill_simpson),</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="st">"metric"</span>, </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">"value"</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">metric =</span> <span class="fu">factor</span>(metric, </span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"std_richness"</span>, <span class="st">"std_hill_shannon"</span>, <span class="st">"std_hill_simpson"</span>),</span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>                       <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Species Richness (q=0)"</span>, </span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"Hill-Shannon (q=1)"</span>, </span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"Hill-Simpson (q=2)"</span>)))</span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(diversity_long, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> value, <span class="at">color =</span> treatment, <span class="at">group =</span> site)) <span class="sc">+</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> metric, <span class="at">scales =</span> <span class="st">"free_y"</span>) <span class="sc">+</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Coverage-Standardized Hill Diversity Metrics"</span>,</span>
+<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Year"</span>, </span>
+<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Diversity Value"</span>) <span class="sc">+</span></span>
+<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="analysis_hill_files/figure-html/visualize_diversity-2.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="diversity-profiles" class="level2">
+<h2 class="anchored" data-anchor-id="diversity-profiles">Diversity Profiles</h2>
+<p>Diversity profiles show how diversity changes with the Hill exponent ℓ, giving a more complete picture of community structure.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create diversity profiles for each site in the final year (2018)</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a><span class="co"># Filter to just 2018 data</span></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>data_2018 <span class="ot">&lt;-</span> abundance_matrix <span class="sc">%&gt;%</span> </span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="st">"2018"</span>)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>site_ids_2018 <span class="ot">&lt;-</span> data_2018<span class="sc">$</span>site</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Safely extract abundance data for 2018 sites</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Using the same approach we used above</span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>abundance_2018 <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(data_2018[, <span class="dv">3</span><span class="sc">:</span><span class="fu">ncol</span>(data_2018)])</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Get treatment information</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a>treatments_2018 <span class="ot">&lt;-</span> site_metadata <span class="sc">%&gt;%</span> </span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(year <span class="sc">==</span> <span class="st">"2018"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(site, treatment)</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Set up the plot</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(<span class="cn">NULL</span>, <span class="at">xlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>), <span class="at">ylim =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">max</span>(diversity_results<span class="sc">$</span>std_richness) <span class="sc">*</span> <span class="fl">1.1</span>),</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a>     <span class="at">xlab =</span> <span class="st">"Hill exponent (ℓ)"</span>, <span class="at">ylab =</span> <span class="st">"Hill Diversity"</span>,</span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a>     <span class="at">main =</span> <span class="st">"Diversity Profiles (2018)"</span>)</span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a><span class="co"># Define colors for treatments</span></span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"Control"</span> <span class="ot">=</span> <span class="st">"blue"</span>, <span class="st">"Impact"</span> <span class="ot">=</span> <span class="st">"red"</span>)</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate and plot diversity profiles</span></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(abundance_2018)) {</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>  site_id <span class="ot">&lt;-</span> site_ids_2018[i]</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a>  site_abund <span class="ot">&lt;-</span> abundance_2018[i, ]</span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>  site_abund <span class="ot">&lt;-</span> site_abund[site_abund <span class="sc">&gt;</span> <span class="dv">0</span>]  <span class="co"># Remove zeros</span></span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Get treatment for this site</span></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a>  site_treatment <span class="ot">&lt;-</span> treatments_2018<span class="sc">$</span>treatment[treatments_2018<span class="sc">$</span>site <span class="sc">==</span> site_id]</span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-34"><a href="#cb17-34" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Calculate diversity for a range of exponents</span></span>
+<span id="cb17-35"><a href="#cb17-35" aria-hidden="true" tabindex="-1"></a>  exponents <span class="ot">&lt;-</span> <span class="fu">seq</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">1</span>, <span class="at">by =</span> <span class="fl">0.1</span>)</span>
+<span id="cb17-36"><a href="#cb17-36" aria-hidden="true" tabindex="-1"></a>  profile_values <span class="ot">&lt;-</span> <span class="fu">sapply</span>(exponents, <span class="cf">function</span>(ell) <span class="fu">rarity</span>(site_abund, <span class="at">q =</span> <span class="dv">1</span> <span class="sc">-</span> ell))</span>
+<span id="cb17-37"><a href="#cb17-37" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb17-38"><a href="#cb17-38" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Plot the profile</span></span>
+<span id="cb17-39"><a href="#cb17-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">lines</span>(exponents, profile_values, <span class="at">col =</span> colors[site_treatment], <span class="at">lwd =</span> <span class="dv">2</span>)</span>
+<span id="cb17-40"><a href="#cb17-40" aria-hidden="true" tabindex="-1"></a>  <span class="fu">points</span>(<span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">1</span>), profile_values[<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">11</span>, <span class="dv">21</span>)], </span>
+<span id="cb17-41"><a href="#cb17-41" aria-hidden="true" tabindex="-1"></a>        <span class="at">col =</span> colors[site_treatment], <span class="at">pch =</span> <span class="dv">19</span>)</span>
+<span id="cb17-42"><a href="#cb17-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">text</span>(<span class="dv">1</span>, profile_values[<span class="dv">21</span>], site_id, <span class="at">pos =</span> <span class="dv">4</span>, <span class="at">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb17-43"><a href="#cb17-43" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-44"><a href="#cb17-44" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-45"><a href="#cb17-45" aria-hidden="true" tabindex="-1"></a><span class="co"># Add a legend</span></span>
+<span id="cb17-46"><a href="#cb17-46" aria-hidden="true" tabindex="-1"></a><span class="fu">legend</span>(<span class="st">"topright"</span>, <span class="at">legend =</span> <span class="fu">names</span>(colors), <span class="at">col =</span> colors, <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">pch =</span> <span class="dv">19</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="analysis_hill_files/figure-html/diversity_profiles-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="statistical-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="statistical-analysis">Statistical Analysis</h2>
+<p>Now we analyze the diversity data using linear mixed-effects models with a BACI design. As recommended by Roswell et al., we focus primarily on Hill-Shannon diversity for our statistical analysis because it provides a balanced measure of diversity.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Model for Hill-Shannon diversity (recommended for ecological applications)</span></span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>model_hill_shannon <span class="ot">&lt;-</span> <span class="fu">lmer</span>(std_hill_shannon <span class="sc">~</span> year <span class="sc">*</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">data =</span> diversity_results)</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_hill_shannon)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: std_hill_shannon ~ year * treatment + (1 | site)
+   Data: diversity_results
+
+REML criterion at convergence: 90.2
+
+Scaled residuals: 
+    Min      1Q  Median      3Q     Max 
+-1.7334 -0.6492  0.1059  0.7308  1.3771 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ site     (Intercept) 0.8421   0.9176  
+ Residual             4.8132   2.1939  
+Number of obs: 24, groups:  site, 8
+
+Fixed effects:
+                         Estimate Std. Error     df t value Pr(&gt;|t|)    
+(Intercept)                 6.818      1.189 17.236   5.734 2.31e-05 ***
+year2003                    1.121      1.551 12.000   0.723    0.484    
+year2018                    2.710      1.551 12.000   1.747    0.106    
+treatmentImpact            -1.047      1.682 17.236  -0.623    0.542    
+year2003:treatmentImpact    1.511      2.194 12.000   0.689    0.504    
+year2018:treatmentImpact   -1.247      2.194 12.000  -0.568    0.580    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Correlation of Fixed Effects:
+            (Intr) yr2003 yr2018 trtmnI y2003:
+year2003    -0.652                            
+year2018    -0.652  0.500                     
+trtmntImpct -0.707  0.461  0.461              
+yr2003:trtI  0.461 -0.707 -0.354 -0.652       
+yr2018:trtI  0.461 -0.354 -0.707 -0.652  0.500</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Extract p-values</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>p_values <span class="ot">&lt;-</span> <span class="fu">summary</span>(model_hill_shannon)<span class="sc">$</span>coefficients[, <span class="st">"Pr(&gt;|t|)"</span>]</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(p_values)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>             (Intercept)                 year2003                 year2018 
+            2.307004e-05             4.837059e-01             1.061402e-01 
+         treatmentImpact year2003:treatmentImpact year2018:treatmentImpact 
+            5.415425e-01             5.040872e-01             5.803520e-01 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Calculate estimated marginal means</span></span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>emm_hill_shannon <span class="ot">&lt;-</span> <span class="fu">emmeans</span>(model_hill_shannon, <span class="sc">~</span> year <span class="sc">*</span> treatment)</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a><span class="fu">pairs</span>(emm_hill_shannon)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code> contrast                            estimate   SE   df t.ratio p.value
+ year2002 Control - year2003 Control   -1.121 1.55 12.0  -0.723  0.9752
+ year2002 Control - year2018 Control   -2.710 1.55 12.0  -1.747  0.5295
+ year2002 Control - year2002 Impact     1.047 1.68 17.2   0.623  0.9877
+ year2002 Control - year2003 Impact    -1.585 1.68 17.2  -0.942  0.9296
+ year2002 Control - year2018 Impact    -0.416 1.68 17.2  -0.248  0.9998
+ year2003 Control - year2018 Control   -1.589 1.55 12.0  -1.024  0.9009
+ year2003 Control - year2002 Impact     2.168 1.68 17.2   1.290  0.7866
+ year2003 Control - year2003 Impact    -0.464 1.68 17.2  -0.276  0.9997
+ year2003 Control - year2018 Impact     0.705 1.68 17.2   0.419  0.9980
+ year2018 Control - year2002 Impact     3.758 1.68 17.2   2.235  0.2722
+ year2018 Control - year2003 Impact     1.125 1.68 17.2   0.669  0.9831
+ year2018 Control - year2018 Impact     2.294 1.68 17.2   1.364  0.7466
+ year2002 Impact - year2003 Impact     -2.632 1.55 12.0  -1.697  0.5580
+ year2002 Impact - year2018 Impact     -1.464 1.55 12.0  -0.943  0.9271
+ year2003 Impact - year2018 Impact      1.169 1.55 12.0   0.753  0.9705
+
+Degrees-of-freedom method: kenward-roger 
+P value adjustment: tukey method for comparing a family of 6 estimates </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Also analyze richness and Simpson diversity for comparison</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>model_richness <span class="ot">&lt;-</span> <span class="fu">lmer</span>(std_richness <span class="sc">~</span> year <span class="sc">*</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), </span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>                      <span class="at">data =</span> diversity_results)</span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_richness)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: std_richness ~ year * treatment + (1 | site)
+   Data: diversity_results
+
+REML criterion at convergence: 105.5
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.70784 -0.50146 -0.02167  0.58058  1.36244 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ site     (Intercept)  0.2659  0.5156  
+ Residual             12.6736  3.5600  
+Number of obs: 24, groups:  site, 8
+
+Fixed effects:
+                         Estimate Std. Error     df t value Pr(&gt;|t|)    
+(Intercept)                 9.809      1.799 17.985   5.454 3.53e-05 ***
+year2003                    1.156      2.517 12.000   0.459    0.654    
+year2018                    2.475      2.517 12.000   0.983    0.345    
+treatmentImpact            -2.727      2.544 17.985  -1.072    0.298    
+year2003:treatmentImpact    4.236      3.560 12.000   1.190    0.257    
+year2018:treatmentImpact    1.088      3.560 12.000   0.306    0.765    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Correlation of Fixed Effects:
+            (Intr) yr2003 yr2018 trtmnI y2003:
+year2003    -0.700                            
+year2018    -0.700  0.500                     
+trtmntImpct -0.707  0.495  0.495              
+yr2003:trtI  0.495 -0.707 -0.354 -0.700       
+yr2018:trtI  0.495 -0.354 -0.707 -0.700  0.500</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>model_simpson <span class="ot">&lt;-</span> <span class="fu">lmer</span>(std_hill_simpson <span class="sc">~</span> year <span class="sc">*</span> treatment <span class="sc">+</span> (<span class="dv">1</span> <span class="sc">|</span> site), </span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> diversity_results)</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_simpson)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Linear mixed model fit by REML. t-tests use Satterthwaite's method [
+lmerModLmerTest]
+Formula: std_hill_simpson ~ year * treatment + (1 | site)
+   Data: diversity_results
+
+REML criterion at convergence: 79.9
+
+Scaled residuals: 
+     Min       1Q   Median       3Q      Max 
+-1.73870 -0.59927  0.06513  0.63334  1.50122 
+
+Random effects:
+ Groups   Name        Variance Std.Dev.
+ site     (Intercept) 0.619    0.7867  
+ Residual             2.612    1.6162  
+Number of obs: 24, groups:  site, 8
+
+Fixed effects:
+                         Estimate Std. Error      df t value Pr(&gt;|t|)    
+(Intercept)                5.0304     0.8987 16.7691   5.597 3.37e-05 ***
+year2003                   0.7827     1.1428 12.0000   0.685   0.5064    
+year2018                   2.5056     1.1428 12.0000   2.193   0.0488 *  
+treatmentImpact           -0.2248     1.2710 16.7691  -0.177   0.8618    
+year2003:treatmentImpact   0.4380     1.6162 12.0000   0.271   0.7910    
+year2018:treatmentImpact  -2.0831     1.6162 12.0000  -1.289   0.2217    
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Correlation of Fixed Effects:
+            (Intr) yr2003 yr2018 trtmnI y2003:
+year2003    -0.636                            
+year2018    -0.636  0.500                     
+trtmntImpct -0.707  0.450  0.450              
+yr2003:trtI  0.450 -0.707 -0.354 -0.636       
+yr2018:trtI  0.450 -0.354 -0.707 -0.636  0.500</code></pre>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the estimated means with error bars</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>emm_data <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(emm_hill_shannon)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(emm_data, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> emmean, <span class="at">color =</span> treatment, <span class="at">group =</span> treatment)) <span class="sc">+</span></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">linewidth =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_errorbar</span>(<span class="fu">aes</span>(<span class="at">ymin =</span> emmean <span class="sc">-</span> SE, <span class="at">ymax =</span> emmean <span class="sc">+</span> SE), <span class="at">width =</span> <span class="fl">0.2</span>) <span class="sc">+</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Hill-Shannon Diversity by Treatment and Year"</span>,</span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Year"</span>, </span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Estimated Hill-Shannon Diversity"</span>) <span class="sc">+</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="analysis_hill_files/figure-html/plot_emm-1.png" class="img-fluid figure-img" width="768"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="analysis-of-raw-vs.-coverage-standardized-results" class="level2">
+<h2 class="anchored" data-anchor-id="analysis-of-raw-vs.-coverage-standardized-results">Analysis of Raw vs.&nbsp;Coverage-standardized Results</h2>
+<p>Let’s compare the raw diversity metrics with the coverage-standardized metrics to see how standardization affects our conclusions.</p>
+<p>The shape of the curves are similar although estimated species of the Hill Shannon estimate is lower.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Combine raw and standardized metrics for comparison</span></span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>diversity_compare <span class="ot">&lt;-</span> diversity_results <span class="sc">%&gt;%</span></span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">select</span>(site, year, treatment, period, </span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>         raw_hill_shannon, std_hill_shannon,</span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>         sampling_events, coverage) <span class="sc">%&gt;%</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(</span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">cols =</span> <span class="fu">c</span>(raw_hill_shannon, std_hill_shannon),</span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">names_to =</span> <span class="st">"metric_type"</span>,</span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">values_to =</span> <span class="st">"hill_shannon"</span></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">metric_type =</span> <span class="fu">factor</span>(metric_type, </span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"raw_hill_shannon"</span>, <span class="st">"std_hill_shannon"</span>),</span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a>                            <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"Raw Hill-Shannon"</span>, <span class="st">"Coverage-standardized Hill-Shannon"</span>)))</span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Plot the comparison</span></span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(diversity_compare, <span class="fu">aes</span>(<span class="at">x =</span> year, <span class="at">y =</span> hill_shannon, <span class="at">linetype =</span> treatment, <span class="at">color =</span> site, <span class="at">group =</span> site)) <span class="sc">+</span></span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span> metric_type) <span class="sc">+</span></span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span></span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_line</span>(<span class="at">size =</span> <span class="dv">1</span>) <span class="sc">+</span></span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Raw vs. Coverage-standardized Hill-Shannon Diversity"</span>,</span>
+<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Year"</span>, </span>
+<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Hill-Shannon Diversity"</span>) <span class="sc">+</span></span>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+ℹ Please use `linewidth` instead.</code></pre>
+</div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="analysis_hill_files/figure-html/raw_vs_std-1.png" class="img-fluid figure-img" width="960"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check correlation between sampling events and raw diversity</span></span>
+<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>cor_sampling_raw <span class="ot">&lt;-</span> <span class="fu">cor</span>(diversity_results<span class="sc">$</span>sampling_events, diversity_results<span class="sc">$</span>raw_hill_shannon)</span>
+<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Correlation between sampling events and raw Hill-Shannon diversity:"</span>, cor_sampling_raw, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Correlation between sampling events and raw Hill-Shannon diversity: 0.05416637 </code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb33"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check correlation between sampling events and standardized diversity</span></span>
+<span id="cb33-2"><a href="#cb33-2" aria-hidden="true" tabindex="-1"></a>cor_sampling_std <span class="ot">&lt;-</span> <span class="fu">cor</span>(diversity_results<span class="sc">$</span>sampling_events, diversity_results<span class="sc">$</span>std_hill_shannon)</span>
+<span id="cb33-3"><a href="#cb33-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">"Correlation between sampling events and standardized Hill-Shannon diversity:"</span>, cor_sampling_std, <span class="st">"</span><span class="sc">\n</span><span class="st">"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Correlation between sampling events and standardized Hill-Shannon diversity: -0.2178351 </code></pre>
+</div>
+</div>
+<section id="key-findings" class="level3">
+<h3 class="anchored" data-anchor-id="key-findings">Key Findings</h3>
+<ol type="1">
+<li><p><strong>Coverage Standardization</strong>: Standardizing by coverage rather than by sample size or effort allows for more robust comparisons across sites and years. The minimum coverage across our samples was 0.769, which means we’re comparing equally complete samples from each community.</p></li>
+<li><p><strong>Hill Diversity Metrics</strong>: The three Hill diversity metrics (richness, Shannon, and Simpson) provide different perspectives on community diversity:</p>
+<ul>
+<li>Species richness (ℓ=1, q=0) gives equal weight to all species and is most sensitive to rare species</li>
+<li>Hill-Shannon diversity (ℓ=0, q=1) provides a balanced view of diversity</li>
+<li>Hill-Simpson diversity (ℓ=-1, q=2) emphasizes common species</li>
+</ul></li>
+<li><p><strong>BACI Analysis</strong>: Our statistical analysis using a BACI design reveals:</p>
+<ul>
+<li>None of the models are significant</li>
+<li>We have no interaction terms that are significant</li>
+<li>Using the Simpson diversity which emphasizes common diversity, there is a difference between 2002 and 2018</li>
+</ul></li>
+</ol>
+</section>
+<section id="comparison-to-traditional-methods" class="level3">
+<h3 class="anchored" data-anchor-id="comparison-to-traditional-methods">Comparison to Traditional Methods</h3>
+<p>The approach using Hill diversity and coverage standardization provides several advantages over traditional methods:</p>
+<ol type="1">
+<li><p><strong>More robust to sampling differences</strong>: By standardizing to equal coverage, we account for differences in the underlying species abundance distributions across sites and years.</p></li>
+<li><p><strong>Unified framework</strong>: The Hill diversity framework provides a unified way to understand different aspects of diversity, from rare species (richness) to common species (Simpson).</p></li>
+<li><p><strong>Interpretable units</strong>: All Hill diversity metrics are expressed in “effective number of species,” making them more intuitive to interpret than traditional indices.</p></li>
+</ol>
+</section>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<p>Roswell, M., Dushoff, J., &amp; Winfree, R. (2021). A conceptual guide to measuring species diversity. Oikos, 130(3), 321-338.</p>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    // For code content inside modals, clipBoardJS needs to be initialized with a container option
+    // TODO: Check when it could be a function (https://github.com/zenorocha/clipboard.js/issues/860)
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      // TODO in 1.5, we should make sure this works without a callout special case
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
