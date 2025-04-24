@@ -1,0 +1,529 @@
+---
+title: "Bee Diversity Analysis using MeanRarity"
+format: pdf
+editor: visual
+---
+
+# Analyzing Bee Diversity in a BACI Study Design
+
+This analysis uses the methods described in Roswell et al. (2021) to analyze bee diversity across multiple sites in a Before-After-Control-Impact (BACI) design.
+
+## Setup
+
+First, we'll load the necessary packages and read in our data.
+
+```{r setup}
+#| message: false
+#| warning: false
+
+
+
+# Load required packages
+
+library(MeanRarity)  # For calculating Hill diversity metrics
+library(iNEXT)       # For coverage-based rarefaction
+library(dplyr)       # For data manipulation
+library(tidyr)       # For reshaping data
+library(ggplot2)     # For visualization
+library(lubridate)   # For date handling
+library(lme4)        # For mixed-effects models
+library(lmerTest)    # For p-values in mixed models
+library(emmeans)     # For estimated marginal means
+
+# Read in the data
+bee_data <- read.csv("../data/processed/bee_02-18_data.csv") 
+bee_traits <- read.csv("../data/processed/bee_traits.csv", header = TRUE)
+site_data <- read.csv("../data/processed/sites.csv", header = TRUE)
+dates_to_drop <- read.csv("../data/processed/02_03_18_datestodrop.csv", header = TRUE) 
+```
+
+## Data Cleaning
+
+Clean up the data, standardizing site names and formatting dates.
+
+```{r data_cleaning}
+#| message: false
+#| warning: false
+#| echo: false
+
+# Fix site names
+bee_data_clean <- bee_data %>%
+  mutate(site = case_when(
+    site %in% c("Wappo Hill", "Wappo hill") ~ "Wappo", 
+    site %in% c("Stag's leap", "Stags Leap", "Stag's Leap") ~ "Stags", 
+    site %in% c("Veteran's Home") ~ "Veterans", 
+    TRUE ~ site
+  ))
+
+# Reformat dates
+bee_data_clean <- bee_data_clean %>% 
+  mutate(start_date = mdy(start_date))
+dates_to_drop <- dates_to_drop %>% 
+  mutate(date = mdy(date))
+
+# Create combined species name
+bee_data_clean$combined_name <- paste(bee_data_clean$genus_name, bee_data_clean$species, sep=" ")
+
+# Look at data structure
+str(bee_data_clean)
+```
+
+## Preparing Data for Diversity Analysis
+
+To calculate Hill diversity metrics, we create a matrix of species abundances per site and year.
+
+```{r create_abundance_matrix}
+#l warning = FALSE
+#l echo = FALSE
+# Create a wide-format abundance matrix for diversity analysis
+# Each row is a site-year combination, columns are species
+abundance_matrix <- bee_data_clean %>%
+  group_by(site, year, combined_name) %>%
+  # Sum abundance of each species at each site-year
+  summarize(abundance = sum(number), .groups = "drop") %>%
+  # Convert to wide format: species as columns
+  pivot_wider(
+    id_cols = c(site, year),
+    names_from = combined_name,
+    values_from = abundance,
+    values_fill = 0  # Fill missing species with 0
+  )
+
+# Safely extract site_year_ids with base R
+site_year_ids <- data.frame(
+  site = abundance_matrix$site,
+  year = abundance_matrix$year
+)
+
+# Safely create abundance_values matrix
+# This avoids issues with special characters in species names
+abundance_values <- as.matrix(abundance_matrix[, 3:ncol(abundance_matrix)])
+
+# Check dimensions
+cat("Number of site-year combinations:", nrow(site_year_ids), "\n")
+cat("Number of species columns:", ncol(abundance_values), "\n")
+
+# Add metadata about sampling effort
+sampling_effort <- bee_data_clean %>%
+  group_by(site, year) %>%
+  summarise(sampling_events = n_distinct(start_date))
+
+# Add treatment information from site_data
+site_metadata <- site_year_ids %>%
+  left_join(sampling_effort, by = c("site", "year")) %>%
+  left_join(site_data %>% dplyr::select(site, treatment), by = "site")
+
+head(site_metadata)
+```
+
+## Coverage-based Standardization
+
+Calculates coverage. Coverage estimates what proportion of the total community (including undetected species) is represented in our sample. Our results are pretty good.
+
+```{r calculate_coverage}
+# Calculate coverage for each site-year combination
+site_coverage <- data.frame(site_year_ids, 
+                           coverage = apply(abundance_values, 1, function(x) {
+                             # Count singletons (species with only 1 individual)
+                             f1 <- sum(x == 1)
+                             # Get total number of individuals
+                             n <- sum(x)
+                             # Calculate coverage using the formula from Chao and Jost (2012)
+                             if (f1 == 0) {
+                               return(1) # Perfect coverage if no singletons
+                             } else {
+                               return(1 - (f1/n) * ((n-1)/n))
+                             }
+                           }))
+
+# Find the minimum coverage across all site-years (to use as standardization point)
+min_coverage <- min(site_coverage$coverage)
+cat("Minimum coverage across all site-years:", min_coverage, "\n")
+
+# Display coverage by site and year
+site_coverage %>%
+  arrange(coverage) %>%
+  knitr::kable(caption = "Sample coverage by site and year")
+```
+
+## Calculating Hill Diversity Metrics
+
+Just some notes on Hill Diversity
+
+Hill diversity unifies different diversity metrics (richness, Shannon, Simpson) into a common framework. The parameter ℓ (or q) determines how much weight is given to rare versus common species.
+
+The MeanRarity package uses parameter q in its code implementation, while their conceptual framework in the paper uses ℓ. The relationship between them is ℓ = 1-q, so:
+
+Species richness: ℓ=1 corresponds to q=0 Hill-Shannon: ℓ=0 corresponds to q=1 Hill-Simpson: ℓ=-1 corresponds to q=2
+
+```{r calculate_diversity}
+#| warning: false
+# Function to calculate Hill diversity metrics for each site-year
+calculate_diversity_metrics <- function() {
+  diversity_results <- data.frame()
+  
+  for (i in 1:nrow(site_year_ids)) {
+    site_id <- site_year_ids$site[i]
+    yr <- site_year_ids$year[i]
+    
+    # Extract abundance data for this site-year
+    site_data_vec <- abundance_values[i, ]
+    site_data_vec <- site_data_vec[site_data_vec > 0]  # Remove zeros
+    
+    # Calculate raw Hill diversity using the rarity function from MeanRarity
+    richness_raw <- rarity(site_data_vec, q = 0)
+    hill_shannon_raw <- rarity(site_data_vec, q = 1)
+    hill_simpson_raw <- rarity(site_data_vec, q = 2)
+    
+    # Use iNEXT to estimate diversity at standardized coverage
+    inext_result <- estimateD(site_data_vec, datatype = "abundance", 
+                             base = "coverage", level = min_coverage)
+    
+    # The issue is in extracting values from inext_result
+    # Print the structure to understand how to access the values
+    # print(str(inext_result))
+    
+    # Get the values in the correct way
+    # iNEXT results are sorted by order (0, 1, 2)
+    richness_std <- inext_result$qD[1]     # First row is q=0 (richness)
+    hill_shannon_std <- inext_result$qD[2] # Second row is q=1 (Shannon)
+    hill_simpson_std <- inext_result$qD[3] # Third row is q=2 (Simpson)
+    
+    # Combine with existing metadata
+    result_row <- data.frame(
+      site = site_id,
+      year = yr,
+      raw_richness = richness_raw,
+      raw_hill_shannon = hill_shannon_raw,
+      raw_hill_simpson = hill_simpson_raw,
+      std_richness = richness_std,
+      std_hill_shannon = hill_shannon_std,
+      std_hill_simpson = hill_simpson_std,
+      coverage = site_coverage$coverage[i]
+    )
+    
+    # Append to the result data frame
+    diversity_results <- rbind(diversity_results, result_row)
+  }
+  
+  # Add metadata about treatment and sampling effort
+  diversity_results <- diversity_results %>%
+    left_join(site_metadata, by = c("site", "year"))
+  
+  return(diversity_results)
+}
+
+# Calculate diversity metrics
+diversity_results <- calculate_diversity_metrics()
+
+# Create factors for time period and ensure proper ordering
+diversity_results$period <- ifelse(diversity_results$year == "2018", "After", "Before")
+diversity_results$period <- factor(diversity_results$period, levels = c("Before", "After"))
+diversity_results$treatment <- factor(diversity_results$treatment, levels = c("Control", "Impact"))
+diversity_results$year <- factor(diversity_results$year, levels = c("2002", "2003", "2018"))
+```
+
+## Visualizing Diversity Metrics
+
+Visualization of the diversity results to understand the patterns across sites, years, and treatments.
+
+```{r visualize_diversity}
+#| fig.width: 10
+#| fig.height: 6
+
+# Visualize Hill-Shannon diversity (standardized by coverage)
+ggplot(diversity_results, aes(x = year, y = std_hill_shannon, color = treatment, group = site)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  labs(title = "Hill-Shannon Diversity (Coverage-Standardized)",
+       x = "Year", 
+       y = "Hill-Shannon Diversity (q=1)") +
+  theme_minimal()
+
+# Compare all three diversity metrics
+diversity_long <- diversity_results %>%
+  pivot_longer(cols = c(std_richness, std_hill_shannon, std_hill_simpson),
+               names_to = "metric", 
+               values_to = "value") %>%
+  mutate(metric = factor(metric, 
+                       levels = c("std_richness", "std_hill_shannon", "std_hill_simpson"),
+                       labels = c("Species Richness (q=0)", 
+                                 "Hill-Shannon (q=1)", 
+                                 "Hill-Simpson (q=2)")))
+
+ggplot(diversity_long, aes(x = year, y = value, color = treatment, group = site)) +
+  facet_wrap(~ metric, scales = "free_y") +
+  geom_point(size = 2) +
+  geom_line(linewidth = 1) +
+  labs(title = "Coverage-Standardized Hill Diversity Metrics",
+       x = "Year", 
+       y = "Diversity Value") +
+  theme_minimal()
+```
+
+## Diversity Profiles
+
+Diversity profiles show how diversity changes with the Hill exponent ℓ, giving a more complete picture of community structure. This is just done for 2018. Could do for all years.
+
+```{r diversity_profiles}
+#| fig.width: 8
+#| fig.height: 6
+#| warning: false
+
+# Create diversity profiles for each site in the final year (2018)
+# Filter to just 2018 data
+data_2018 <- abundance_matrix %>% 
+  filter(year == "2018")
+site_ids_2018 <- data_2018$site
+
+# Safely extract abundance data for 2018 sites
+# Using the same approach we used above
+abundance_2018 <- as.matrix(data_2018[, 3:ncol(data_2018)])
+
+# Get treatment information
+treatments_2018 <- site_metadata %>% 
+  filter(year == "2018") %>% 
+  dplyr::select(site, treatment)
+
+# Set up the plot
+par(mfrow = c(1, 1))
+plot(NULL, xlim = c(-1, 1), ylim = c(0, max(diversity_results$std_richness) * 1.1),
+     xlab = "Hill exponent (ℓ)", ylab = "Hill Diversity",
+     main = "Diversity Profiles (2018)")
+
+# Define colors for treatments
+colors <- c("Control" = "blue", "Impact" = "red")
+
+# Calculate and plot diversity profiles
+for (i in 1:nrow(abundance_2018)) {
+  site_id <- site_ids_2018[i]
+  site_abund <- abundance_2018[i, ]
+  site_abund <- site_abund[site_abund > 0]  # Remove zeros
+  
+  # Get treatment for this site
+  site_treatment <- treatments_2018$treatment[treatments_2018$site == site_id]
+  
+  # Calculate diversity for a range of exponents
+  exponents <- seq(-1, 1, by = 0.1)
+  profile_values <- sapply(exponents, function(ell) rarity(site_abund, q = 1 - ell))
+  
+  # Plot the profile
+  lines(exponents, profile_values, col = colors[site_treatment], lwd = 2)
+  points(c(-1, 0, 1), profile_values[c(1, 11, 21)], 
+        col = colors[site_treatment], pch = 19)
+  text(1, profile_values[21], site_id, pos = 4, cex = 0.8)
+}
+
+# Add a legend
+legend("topright", legend = names(colors), col = colors, lwd = 2, pch = 19)
+```
+
+## Statistical Analysis
+
+Linear mixed-effects models with a BACI design. Dependent variable is Hill-Shannon diversity but also anlyze richness and Simpson diversity. Repeated the model with and without taking into account sampling effort. AICs for models with and without taking sampling effort into account are virtually identical
+
+```{r statistical_analysis}
+# Model for Hill-Shannon diversity 
+model_hill_shannon <- lmer(std_hill_shannon ~ year * treatment + (1 | site), 
+                          data = diversity_results)
+summary(model_hill_shannon)
+
+# Model for Hill-Shannon diversity including sampling events
+model_hill_shannon_with_sampling <- lmer(std_hill_shannon ~ year * treatment + sampling_events + (1 | site), 
+                                       data = diversity_results)
+summary(model_hill_shannon_with_sampling)
+
+# Compare models
+anova(model_hill_shannon, model_hill_shannon_with_sampling)
+
+# Extract p-values
+p_values <- summary(model_hill_shannon)$coefficients[, "Pr(>|t|)"]
+print(p_values)
+
+# Calculate estimated marginal means
+emm_hill_shannon <- emmeans(model_hill_shannon, ~ year * treatment)
+pairs(emm_hill_shannon)
+
+# Calculate estimated marginal means accounting for sampling events
+# Using emmeans for a specific level of sampling_events (mean value)
+mean_sampling <- mean(diversity_results$sampling_events)
+emm_hill_shannon_sampling <- emmeans(model_hill_shannon_with_sampling, 
+                                   ~ year * treatment, 
+                                   at = list(sampling_events = mean_sampling))
+pairs(emm_hill_shannon_sampling)
+
+# Also analyze richness and Simpson diversity for comparison
+model_richness <- lmer(std_richness ~ year * treatment + (1 | site), 
+                      data = diversity_results)
+summary(model_richness)
+
+# Update richness model to include sampling events
+model_richness_with_sampling <- lmer(std_richness ~ year * treatment + sampling_events + (1 | site), 
+                                   data = diversity_results)
+summary(model_richness_with_sampling)
+
+# Compare richness models
+anova(model_richness, model_richness_with_sampling)
+
+model_simpson <- lmer(std_hill_simpson ~ year * treatment + (1 | site), 
+                     data = diversity_results)
+summary(model_simpson)
+
+# Update Simpson model to include sampling events
+model_simpson_with_sampling <- lmer(std_hill_simpson ~ year * treatment + sampling_events + (1 | site), 
+                                  data = diversity_results)
+summary(model_simpson_with_sampling)
+
+# Compare Simpson models
+anova(model_simpson, model_simpson_with_sampling)
+```
+
+```{r plot_emm, fig.width=8, fig.height=6}
+# Plot the estimated means with error bars
+emm_data <- as.data.frame(emm_hill_shannon)
+ggplot(emm_data, aes(x = year, y = emmean, color = treatment, group = treatment)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) +
+  labs(title = "Hill-Shannon Diversity by Treatment and Year",
+       x = "Year", 
+       y = "Estimated Hill-Shannon Diversity") +
+  theme_minimal()
+
+# Plot the estimated means with error bars, adjusted for sampling events
+emm_data_sampling <- as.data.frame(emm_hill_shannon_sampling)
+ggplot(emm_data_sampling, aes(x = year, y = emmean, color = treatment, group = treatment)) +
+  geom_point(size = 3) +
+  geom_line(linewidth = 1) +
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2) +
+  labs(title = "Hill-Shannon Diversity by Treatment and Year (Adjusted for Sampling Events)",
+       x = "Year", 
+       y = "Estimated Hill-Shannon Diversity") +
+  theme_minimal()
+```
+
+## Analysis of Raw vs. Coverage-standardized Results
+
+Compares the raw diversity metrics with the coverage-standardized metrics to see how standardization affects our conclusions.
+
+Also does some plotting of effect of sampling_events.
+
+The shape of the curves are similar although estimated species of the Hill Shannon estimate is lower.
+
+```{r raw_vs_std, fig.width=10, fig.height=6}
+# Combine raw and standardized metrics for comparison
+diversity_compare <- diversity_results %>%
+  dplyr::select(site, year, treatment, period, 
+         raw_hill_shannon, std_hill_shannon,
+         sampling_events, coverage) %>%
+  pivot_longer(
+    cols = c(raw_hill_shannon, std_hill_shannon),
+    names_to = "metric_type",
+    values_to = "hill_shannon"
+  ) %>%
+  mutate(metric_type = factor(metric_type, 
+                            levels = c("raw_hill_shannon", "std_hill_shannon"),
+                            labels = c("Raw Hill-Shannon", "Coverage-standardized Hill-Shannon")))
+
+# Plot the comparison
+ggplot(diversity_compare, aes(x = year, y = hill_shannon, linetype = treatment, color = site, group = site)) +
+  facet_wrap(~ metric_type) +
+  geom_point(size = 3) +
+  geom_line(size = 1) +
+    labs(title = "Raw vs. Coverage-standardized Hill-Shannon Diversity",
+       x = "Year", 
+       y = "Hill-Shannon Diversity") +
+  theme_minimal()
+
+# Check correlation between sampling events and raw diversity
+cor_sampling_raw <- cor(diversity_results$sampling_events, diversity_results$raw_hill_shannon)
+cat("Correlation between sampling events and raw Hill-Shannon diversity:", cor_sampling_raw, "\n")
+
+# Check correlation between sampling events and standardized diversity
+cor_sampling_std <- cor(diversity_results$sampling_events, diversity_results$std_hill_shannon)
+cat("Correlation between sampling events and standardized Hill-Shannon diversity:", cor_sampling_std, "\n")
+
+# Visualize diversity by sampling events
+ggplot(diversity_results, aes(x = sampling_events, y = std_hill_shannon, color = treatment, shape = year)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE, linetype = "dashed") +
+  labs(title = "Relationship Between Sampling Events and Diversity",
+       x = "Number of Sampling Events", 
+       y = "Hill-Shannon Diversity (q=1)") +
+  theme_minimal()
+
+# Add facets to see the relationship by year
+ggplot(diversity_results, aes(x = sampling_events, y = std_hill_shannon, color = treatment)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE, linetype = "dashed") +
+  facet_wrap(~ year) +
+  labs(title = "Relationship Between Sampling Events and Diversity by Year",
+       x = "Number of Sampling Events", 
+       y = "Hill-Shannon Diversity (q=1)") +
+  theme_minimal()
+
+# Compare correlations across all diversity metrics
+cor_data <- data.frame(
+  metric = c("Raw Richness", "Raw Hill-Shannon", "Raw Hill-Simpson",
+            "Std Richness", "Std Hill-Shannon", "Std Hill-Simpson"),
+  correlation = c(
+    cor(diversity_results$sampling_events, diversity_results$raw_richness),
+    cor(diversity_results$sampling_events, diversity_results$raw_hill_shannon),
+    cor(diversity_results$sampling_events, diversity_results$raw_hill_simpson),
+    cor(diversity_results$sampling_events, diversity_results$std_richness),
+    cor(diversity_results$sampling_events, diversity_results$std_hill_shannon),
+    cor(diversity_results$sampling_events, diversity_results$std_hill_simpson)
+  ),
+  metric_type = rep(c("Raw", "Standardized"), each = 3)
+)
+
+# Plot correlations
+ggplot(cor_data, aes(x = metric, y = correlation, fill = metric_type)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Correlation Between Sampling Events and Diversity Metrics",
+       y = "Pearson Correlation Coefficient") +
+  theme_minimal()
+
+# Visualize relationship between sampling events and coverage
+ggplot(diversity_results, aes(x = sampling_events, y = coverage, color = treatment)) +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Relationship Between Sampling Events and Coverage",
+       x = "Number of Sampling Events", 
+       y = "Sample Coverage") +
+  theme_minimal()
+```
+
+### Notes and resultss.
+
+**Hill Diversity Metrics**: The three Hill diversity metrics (richness, Shannon, and Simpson) provide different perspectives on community diversity:
+
+```         
+-   Species richness (ℓ=1, q=0) gives equal weight to all species and is most sensitive to rare species
+-   Hill-Shannon diversity (ℓ=0, q=1) provides a balanced view of diversity
+-   Hill-Simpson diversity (ℓ=-1, q=2) emphasizes common species
+```
+
+All Hill diversity metrics are expressed in "effective number of species," making them more intuitive to interpret than traditional indices.
+
+<!-- -->
+
+1.  **Coverage Standardization**: SThe minimum coverage across our samples was 0.769, which means we're comparing equally complete samples from each community.
+
+2.  **BACI Analysis**:
+
+    -   None of the models are significant
+    -   We have no interaction terms that are significant
+    -   Using the Simpson diversity which emphasizes common diversity, there is a difference between 2002 and 2018
+
+3.  **Sampling Effort Analysis**: Our analysis of sampling effort shows:
+
+-   The relationship between the number of sampling events and both raw and coverage-standardized diversity metrics
+-   How well coverage standardization accounts for differences in sampling effort
+-   Whether accounting for sampling events in our statistical models changes our conclusions about treatment effects
+-   
+
+## References
+
+Roswell, M., Dushoff, J., & Winfree, R. (2021). A conceptual guide to measuring species diversity. Oikos, 130(3), 321-338.
